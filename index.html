@@ -828,9 +828,54 @@
   .manual-add-input::placeholder { color: var(--text-muted); }
   .manual-add-input.name-input { flex: 1; min-width: 0; }
   .manual-add-input.domain-input { width: 88px; flex-shrink: 0; }
+  /* CLERK LOGIN SCREEN */
+  #clerk-login-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: var(--green);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+  #clerk-login-screen .logo-mark {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--gold-light);
+    letter-spacing: 0.05em;
+  }
+  #clerk-login-screen .logo-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: -16px;
+  }
+  #app-content { display: none; }
 </style>
+<script
+  async
+  crossorigin="anonymous"
+  data-clerk-publishable-key="pk_test_Y2xlYW4tYW5jaG92eS0yNi5jbGVyay5hY2NvdW50cy5kZXYk"
+  src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+  type="text/javascript"
+></script>
 </head>
 <body>
+
+<!-- CLERK LOGIN SCREEN -->
+<div id="clerk-login-screen">
+  <div class="logo-mark">REAT</div>
+  <div class="logo-sub">Aerial Map Tool</div>
+  <div id="clerk-sign-in"></div>
+</div>
+
+<!-- APP CONTENT (hidden until authenticated) -->
+<div id="app-content">
 
 <!-- API KEY ENTRY SCREEN -->
 <div class="no-key-msg" id="keyScreen">
@@ -2307,5 +2352,30 @@ function setStatus(msg) {
 </script>
 
 <!-- Google Maps loaded dynamically after key entry -->
+</div><!-- /app-content -->
+
+<script>
+  // Wait for Clerk to load, then gate access
+  window.addEventListener('load', async () => {
+    await window.Clerk.load();
+
+    if (window.Clerk.user) {
+      // Already signed in — show app
+      document.getElementById('clerk-login-screen').style.display = 'none';
+      document.getElementById('app-content').style.display = 'block';
+    } else {
+      // Show sign-in widget
+      window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'));
+
+      // Listen for sign-in
+      window.Clerk.addListener(({ user }) => {
+        if (user) {
+          document.getElementById('clerk-login-screen').style.display = 'none';
+          document.getElementById('app-content').style.display = 'block';
+        }
+      });
+    }
+  });
+</script>
 </body>
 </html>
