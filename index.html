@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REAT Commercial — Aerial Map Tool</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --gold-light: #cba040;
+    --gold: #ba8c36;
+    --gold-dark: #9a7228;
+    --green: #1a2e1a;
+    --green-mid: #2d4a2d;
+    --green-light: #3d6b3d;
+    --off-white: #f5f2eb;
+    --warm-gray: #e8e4da;
+    --panel-bg: rgba(26, 46, 26, 0.96);
+    --text-light: #f0ead8;
+    --text-muted: #9aab8a;
+    --border: rgba(186, 140, 54, 0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--green);
+    color: var(--text-light);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: var(--green);
+    border-bottom: 1px solid var(--border);
+    z-index: 100;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .logo-mark {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold-light);
+    letter-spacing: 0.05em;
+  }
+
+  .logo-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .property-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--gold);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 7px 14px;
+    border: none;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+
+  .btn-gold {
+    background: var(--gold);
+    color: var(--green);
+    font-weight: 500;
+  }
+  .btn-gold:hover { background: var(--gold-light); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover { border-color: var(--gold); background: rgba(186,140,54,0.08); }
+
+  .btn-outline.active {
+    background: rgba(186,140,54,0.15);
+    border-color: var(--gold);
+    color: var(--gold-light);
+  }
+
+  /* MAIN LAYOUT */
+  .app-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 280px;
+    background: var(--panel-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .sidebar-section {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(186,140,54,0.15);
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  /* SEARCH */
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-wrap input {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text-light);
+    padding: 9px 36px 9px 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-wrap input:focus { border-color: var(--gold); }
+  .search-wrap input::placeholder { color: var(--text-muted); }
+
+  .search-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--gold);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+  }
+
+  #pac-container {
+    position: relative;
+  }
+
+  #pac-input-slot {
+    width: 100%;
+  }
+
+  /* TOGGLES */
+  .toggle-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .toggle-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(186,140,54,0.1);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    grid-column: span 2;
+  }
+
+  .toggle-item.half { grid-column: span 1; }
+
+  .toggle-item:hover { border-color: var(--border); }
+  .toggle-item.on { border-color: rgba(186,140,54,0.4); background: rgba(186,140,54,0.08); }
+
+  .toggle-label {
+    font-size: 11px;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .toggle-icon { font-size: 13px; }
+
+  .toggle-switch {
+    width: 28px;
+    height: 14px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 7px;
+    position: relative;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .toggle-item.on .toggle-switch { background: var(--gold); }
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.15s;
+  }
+  .toggle-item.on .toggle-switch::after { transform: translateX(14px); }
+
+  /* MAP TYPE */
+  .map-type-row {
+    display: flex;
+    gap: 6px;
+  }
+
+  .map-type-btn {
+    flex: 1;
+    padding: 7px 4px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(186,140,54,0.15);
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .map-type-btn:hover { border-color: var(--border); color: var(--text-light); }
+  .map-type-btn.active {
+    background: rgba(186,140,54,0.15);
+    border-color: var(--gold);
+    color: var(--gold-light);
+  }
+
+  /* ZOOM */
+  .zoom-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .zoom-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 3px;
+    background: rgba(186,140,54,0.2);
+    border-radius: 2px;
+    outline: none;
+  }
+  .zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--gold);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .zoom-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    width: 24px;
+    text-align: right;
+  }
+
+  /* HIGHLIGHT TOOL */
+  .color-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .color-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .color-swatch.selected { border-color: white; }
+
+  .opacity-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .opacity-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* BRANDS */
+  .brands-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+  }
+
+  .brands-scroll::-webkit-scrollbar { width: 4px; }
+  .brands-scroll::-webkit-scrollbar-track { background: transparent; }
+  .brands-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .brand-search {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text-light);
+    padding: 7px 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    border-radius: 2px;
+    outline: none;
+    margin-bottom: 10px;
+  }
+  .brand-search::placeholder { color: var(--text-muted); }
+  .brand-search:focus { border-color: var(--gold); }
+
+  .brand-category {
+    margin-bottom: 12px;
+  }
+
+  .brand-cat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(186,140,54,0.1);
+  }
+
+  .brand-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+
+  .brand-chip {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(186,140,54,0.12);
+    border-radius: 3px;
+    padding: 5px 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .brand-chip:hover { border-color: var(--gold); background: rgba(186,140,54,0.1); }
+
+  .brand-chip-icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .brand-chip-name {
+    font-size: 7px;
+    color: var(--text-muted);
+    line-height: 1.2;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+    padding: 0 2px;
+  }
+
+  /* MAP CONTAINER */
+  .map-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* MAP OVERLAY CONTROLS */
+  .map-controls {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 10;
+  }
+
+  .map-ctrl-btn {
+    width: 36px;
+    height: 36px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    color: var(--gold);
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    backdrop-filter: blur(8px);
+  }
+  .map-ctrl-btn:hover { background: rgba(186,140,54,0.15); border-color: var(--gold); }
+  .map-ctrl-btn.active { background: rgba(186,140,54,0.2); border-color: var(--gold-light); }
+
+  /* PLACED LOGO on map */
+  .map-logo-marker {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: move;
+    user-select: none;
+    z-index: 20;
+    transform: translate(-50%, -50%);
+  }
+
+  .map-logo-bubble {
+    background: white;
+    border-radius: 8px;
+    padding: 5px 8px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid rgba(0,0,0,0.1);
+    white-space: nowrap;
+  }
+
+  .map-logo-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9px;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .map-logo-close {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 14px;
+    height: 14px;
+    background: #e74c3c;
+    border-radius: 50%;
+    color: white;
+    font-size: 8px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .map-logo-marker:hover .map-logo-close { display: flex; }
+
+  /* STATUS BAR */
+  .status-bar {
+    padding: 5px 16px;
+    background: var(--green);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  .status-item {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+  }
+
+  /* DRAW MODE INDICATOR */
+  .draw-indicator {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(186,140,54,0.9);
+    color: var(--green);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+    display: none;
+    z-index: 30;
+    backdrop-filter: blur(4px);
+  }
+
+  /* EXPORT PANEL */
+  .export-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+    z-index: 200;
+    min-width: 300px;
+    display: none;
+    backdrop-filter: blur(12px);
+  }
+
+  .export-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    color: var(--gold-light);
+    margin-bottom: 16px;
+  }
+
+  .export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .export-opt {
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .export-opt:hover { border-color: var(--gold); background: rgba(186,140,54,0.08); }
+
+  .export-opt-icon { font-size: 18px; }
+  .export-opt-info {}
+  .export-opt-title { font-size: 12px; color: var(--text-light); font-weight: 500; }
+  .export-opt-desc { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  .overlay-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 150;
+    display: none;
+  }
+
+  /* RADIUS LABEL */
+  .radius-info {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  /* Logo overlay bubbles */
+  .lo-wrap {
+    transform: translate(-50%,-50%);
+    background: white;
+    border-radius: 8px;
+    padding: 4px 7px 4px 5px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.28);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    border: 1px solid rgba(0,0,0,0.08);
+    cursor: move;
+    position: relative;
+  }
+  .lo-img { object-fit: contain; border-radius: 2px; }
+  .lo-name { font-size: 10px; font-weight: 500; color: #222; font-family: 'DM Sans', sans-serif; }
+  .lo-x {
+    width: 13px; height: 13px;
+    background: #e74c3c;
+    border-radius: 50%;
+    color: white;
+    font-size: 9px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-left: 2px;
+  }
+
+  /* Print branding strip — hidden in app, shown on print */
+  #print-branding {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 28px;
+    background: rgba(26,46,26,0.88);
+    border-top: 2px solid #cba040;
+    z-index: 99999;
+    padding: 0 16px;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'DM Sans', sans-serif;
+    backdrop-filter: blur(4px);
+  }
+  #print-branding .pb-left  { display:flex; align-items:baseline; gap:8px; }
+  #print-branding .pb-mark  { font-size:11px; font-weight:700; color:#cba040; letter-spacing:0.08em; font-family:'Cormorant Garamond',serif; }
+  #print-branding .pb-sub   { font-size:7px; color:#9aab8a; letter-spacing:0.22em; text-transform:uppercase; font-family:monospace; }
+  #print-branding .pb-addr  { font-size:9px; font-weight:500; color:#f0ead8; }
+  #print-branding .pb-right { display:flex; align-items:baseline; gap:10px; }
+  #print-branding .pb-date  { font-size:7px; color:#9aab8a; font-family:monospace; }
+  #print-branding .pb-url   { font-size:7px; color:#cba040; letter-spacing:0.1em; font-family:monospace; }
+
+  @media print {
+    @page { size: A4 landscape; margin: 0; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    header, .sidebar, .status-bar, .export-panel, .overlay-backdrop,
+    .map-controls, .draw-indicator, #keyScreen { display: none !important; }
+    body, .app-body, .map-container, #map {
+      height: 100vh !important; width: 100vw !important;
+      position: fixed !important; inset: 0 !important;
+    }
+    #print-branding { display: flex !important; }
+  }
+
+  .no-key-msg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--green);
+    z-index: 50;
+    text-align: center;
+    gap: 12px;
+    padding: 40px;
+  }
+
+  .no-key-msg h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    color: var(--gold-light);
+  }
+
+  .no-key-msg p {
+    font-size: 13px;
+    color: var(--text-muted);
+    max-width: 360px;
+    line-height: 1.6;
+  }
+
+  .key-input-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .key-input {
+    flex: 1;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    color: var(--text-light);
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    border-radius: 2px;
+    outline: none;
+  }
+  .key-input:focus { border-color: var(--gold); }
+
+  /* SECTOR ACCORDION */
+  .sector-item {
+    border-bottom: 1px solid rgba(186,140,54,0.08);
+  }
+  .sector-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+    user-select: none;
+  }
+  .sector-header:hover { background: rgba(186,140,54,0.06); }
+  .sector-arrow {
+    font-size: 8px;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+    width: 10px;
+  }
+  .sector-item.open .sector-arrow { transform: rotate(90deg); }
+  .sector-icon { font-size: 14px; flex-shrink: 0; }
+  .sector-name {
+    flex: 1;
+    font-size: 11px;
+    color: var(--text-light);
+    font-weight: 400;
+  }
+  .sector-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .sector-find-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 7px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--green);
+    background: var(--gold);
+    padding: 1px 5px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .sector-content {
+    display: none;
+    padding: 0 10px 10px 32px;
+  }
+  .sector-item.open .sector-content { display: block; }
+  .sub-cat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 8px 0 5px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid rgba(186,140,54,0.08);
+  }
+
+  /* MANUAL ADD */
+  .manual-add-section {
+    padding: 10px 14px 12px;
+    border-top: 1px solid rgba(186,140,54,0.15);
+    flex-shrink: 0;
+  }
+  .manual-add-row {
+    display: flex;
+    gap: 5px;
+    margin-top: 6px;
+  }
+  .manual-add-input {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text-light);
+    padding: 6px 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    border-radius: 2px;
+    outline: none;
+  }
+  .manual-add-input:focus { border-color: var(--gold); }
+  .manual-add-input::placeholder { color: var(--text-muted); }
+  .manual-add-input.name-input { flex: 1; min-width: 0; }
+  .manual-add-input.domain-input { width: 88px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- API KEY ENTRY SCREEN -->
+<div class="no-key-msg" id="keyScreen">
+  <div class="logo">
+    <span class="logo-mark">REAT</span>
+    <span class="logo-sub" style="font-size:11px; color: var(--gold);">Aerial Map Tool</span>
+  </div>
+  <h2>Enter Your Google Maps API Key</h2>
+  <p>Your key is stored locally in this browser session only. It is never transmitted or saved externally.</p>
+  <div class="key-input-row">
+    <input class="key-input" id="apiKeyInput" type="password" placeholder="AIzaSy..." />
+    <button class="btn btn-gold" onclick="initWithKey()">Load Map</button>
+  </div>
+  <p style="font-size:10px; color: var(--text-muted); margin-top: 4px;">Key saved locally — you won't need to re-enter it.</p>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <span class="logo-mark">REAT</span>
+    <span class="logo-sub">Aerial Map Tool</span>
+  </div>
+  <div class="header-actions">
+    <div class="property-badge" id="propertyBadge">Search a property to begin</div>
+    <button class="btn btn-outline" onclick="clearMarkers()">Clear Logos</button>
+    <button class="btn btn-outline" onclick="clearHighlights()">Clear Highlights</button>
+    <button class="btn btn-gold" onclick="showExport()">Export ↓</button>
+  </div>
+</header>
+
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- ADDRESS SEARCH -->
+    <div class="sidebar-section">
+      <div class="section-label">Subject Property</div>
+      <div class="search-wrap" id="pac-container">
+        <input type="text" id="pac-input" placeholder="Address or business name…" onkeydown="if(event.key==='Enter')searchAddress()" autocomplete="off" />
+        <button class="search-btn" onclick="searchAddress()">→</button>
+      </div>
+    </div>
+
+    <!-- MAP TYPE -->
+    <div class="sidebar-section">
+      <div class="section-label">Map Type</div>
+      <div class="map-type-row">
+        <button class="map-type-btn active" id="mt-satellite" onclick="setMapType('satellite')">Satellite</button>
+        <button class="map-type-btn" id="mt-hybrid" onclick="setMapType('hybrid')">Hybrid</button>
+        <button class="map-type-btn" id="mt-roadmap" onclick="setMapType('roadmap')">Road</button>
+      </div>
+    </div>
+
+    <!-- ZOOM -->
+    <div class="sidebar-section">
+      <div class="section-label">Zoom Level</div>
+      <div class="zoom-row">
+        <span style="font-size:11px; color: var(--text-muted);">Street</span>
+        <input type="range" class="zoom-slider" id="zoomSlider" min="14" max="21" value="17" oninput="setZoom(this.value)" />
+        <span style="font-size:11px; color: var(--text-muted);">Aerial</span>
+        <span class="zoom-val" id="zoomVal">17</span>
+      </div>
+    </div>
+
+    <!-- LAYER TOGGLES -->
+    <div class="sidebar-section">
+      <div class="section-label">Layers</div>
+      <div class="toggle-grid">
+        <div class="toggle-item on half" id="tog-roads" onclick="toggleLayer('roads')">
+          <span class="toggle-label"><span class="toggle-icon">🛣️</span> Road Names</span>
+          <div class="toggle-switch"></div>
+        </div>
+        <div class="toggle-item on half" id="tog-businesses" onclick="toggleLayer('businesses')">
+          <span class="toggle-label"><span class="toggle-icon">🏪</span> Businesses</span>
+          <div class="toggle-switch"></div>
+        </div>
+        <div class="toggle-item on" id="tog-traffic" onclick="toggleLayer('traffic')">
+          <span class="toggle-label"><span class="toggle-icon">🚗</span> Traffic</span>
+          <div class="toggle-switch"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RADII -->
+    <div class="sidebar-section">
+      <div class="section-label">Trade Area Radius</div>
+      <div class="toggle-grid">
+        <div class="toggle-item half" id="tog-r1" onclick="toggleRadius(1)">
+          <span class="toggle-label"><span class="toggle-icon">⭕</span> 1 mi</span>
+          <div class="toggle-switch"></div>
+        </div>
+        <div class="toggle-item half" id="tog-r3" onclick="toggleRadius(3)">
+          <span class="toggle-label"><span class="toggle-icon">⭕</span> 3 mi</span>
+          <div class="toggle-switch"></div>
+        </div>
+        <div class="toggle-item half" id="tog-r5" onclick="toggleRadius(5)">
+          <span class="toggle-label"><span class="toggle-icon">⭕</span> 5 mi</span>
+          <div class="toggle-switch"></div>
+        </div>
+        <div class="toggle-item half" id="tog-r10" onclick="toggleRadius(10)">
+          <span class="toggle-label"><span class="toggle-icon">⭕</span> 10 mi</span>
+          <div class="toggle-switch"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HIGHLIGHT TOOL -->
+    <div class="sidebar-section">
+      <div class="section-label">Highlight Subject Property</div>
+      <div class="color-row">
+        <div class="color-swatch selected" style="background:#FFD700" data-color="#FFD700" onclick="selectColor(this)"></div>
+        <div class="color-swatch" style="background:#FF6B35" data-color="#FF6B35" onclick="selectColor(this)"></div>
+        <div class="color-swatch" style="background:#00B4D8" data-color="#00B4D8" onclick="selectColor(this)"></div>
+        <div class="color-swatch" style="background:#06D6A0" data-color="#06D6A0" onclick="selectColor(this)"></div>
+        <div class="color-swatch" style="background:#FF006E" data-color="#FF006E" onclick="selectColor(this)"></div>
+        <div class="color-swatch" style="background:#FFFFFF" data-color="#FFFFFF" onclick="selectColor(this)"></div>
+        <button class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="startDrawing()">✏️ Draw</button>
+        <button class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="undoLastHighlight()">↩ Undo</button>
+      </div>
+      <div class="opacity-row">
+        <span class="opacity-label">Opacity</span>
+        <input type="range" class="zoom-slider" id="opacitySlider" min="10" max="70" value="35" oninput="updateOpacity(this.value)" style="flex:1"/>
+        <span class="zoom-val" id="opacityVal" style="width:32px;">35%</span>
+      </div>
+    </div>
+
+    <!-- BRAND LOGOS -->
+    <div style="padding: 10px 14px 6px; flex-shrink:0;">
+      <div class="section-label" style="margin-bottom:6px;">Retailers — Click to Place</div>
+      <input type="text" class="brand-search" id="brandSearch" placeholder="Search all brands…" oninput="filterBrands(this.value)" />
+    </div>
+    <div class="brands-scroll" id="brandsScroll">
+      <!-- Sector accordion populated by JS -->
+    </div>
+    <!-- MANUAL ADD -->
+    <div class="manual-add-section">
+      <div class="section-label">Add Custom Brand</div>
+      <div class="manual-add-row">
+        <input type="text" class="manual-add-input name-input" id="customBrandName" placeholder="Brand name" />
+        <input type="text" class="manual-add-input domain-input" id="customBrandDomain" placeholder="domain.com" />
+        <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" onclick="addCustomBrand()">+ Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-container">
+    <div id="map"></div>
+    <div class="draw-indicator" id="drawIndicator">Draw Mode — Click to add as many points as needed — Double-click to finish — ESC to cancel</div>
+
+    <!-- MAP CONTROLS -->
+    <div class="map-controls">
+      <button class="map-ctrl-btn" title="Rotate -45°" onclick="rotateMap(-45)">↺</button>
+      <button class="map-ctrl-btn" title="Rotate +45°" onclick="rotateMap(45)">↻</button>
+      <button class="map-ctrl-btn" title="Reset rotation" onclick="resetRotation()">⊕</button>
+      <button class="map-ctrl-btn" title="My location" onclick="myLocation()">◎</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT BRANDING STRIP (hidden in app, visible only on print) -->
+<div id="print-branding">
+  <div class="pb-left">
+    <span class="pb-mark">REAT</span>
+    <span class="pb-sub">Commercial Real Estate</span>
+  </div>
+  <div class="pb-addr" id="pb-addr"></div>
+  <div class="pb-right">
+    <span class="pb-date" id="pb-date"></span>
+    <span class="pb-url">reatcommercial.com</span>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="status-item"><div class="status-dot"></div> <span id="statusText">Ready</span></div>
+  <div class="status-item">Logos placed: <span id="logoCount" style="color:var(--gold)">0</span></div>
+  <div class="status-item">Lat/Lng: <span id="coordDisplay" style="color:var(--gold); font-size:9px;">—</span></div>
+  <div class="status-item" style="margin-left:auto;">REAT Commercial · Aerial Map Tool v1.0</div>
+</div>
+
+<!-- EXPORT PANEL -->
+<div class="overlay-backdrop" id="exportBackdrop" onclick="hideExport()"></div>
+<div class="export-panel" id="exportPanel">
+  <h3>Export Map</h3>
+  <div class="export-options">
+    <div class="export-opt" onclick="exportA4()">
+      <span class="export-opt-icon">📄</span>
+      <div class="export-opt-info">
+        <div class="export-opt-title">PDF</div>
+        <div class="export-opt-desc">Branded A4 landscape · Save as PDF from print dialog</div>
+      </div>
+    </div>
+    <div class="export-opt" onclick="exportImage('png')">
+      <span class="export-opt-icon">🖼️</span>
+      <div class="export-opt-info">
+        <div class="export-opt-title">PNG</div>
+        <div class="export-opt-desc">High-res map image · opens in new tab to save</div>
+      </div>
+    </div>
+    <div class="export-opt" onclick="exportImage('jpg')">
+      <span class="export-opt-icon">📷</span>
+      <div class="export-opt-info">
+        <div class="export-opt-title">JPEG</div>
+        <div class="export-opt-desc">Compressed image for emails & sharing</div>
+      </div>
+    </div>
+    <div class="export-opt" onclick="copyShareLink()">
+      <span class="export-opt-icon">🔗</span>
+      <div class="export-opt-info">
+        <div class="export-opt-title">Copy Google Maps Link</div>
+        <div class="export-opt-desc">Share current view location</div>
+      </div>
+    </div>
+  </div>
+  <button class="btn btn-outline" style="width:100%;margin-top:4px;" onclick="hideExport()">Cancel</button>
+</div>
+
+<script>
+// ─── SECTOR / BRAND DATA ──────────────────────────────────────────────────────
+const SECTORS = {
+  "Power Center Anchor": {
+    icon: "🏪",
+    sub: {
+      "Power Center Anchor": [
+        { name: "Walmart", domain: "walmart.com", icon: "🔵" },
+        { name: "Walmart Supercenter", domain: "walmart.com", icon: "🔵" },
+        { name: "Target", domain: "target.com", icon: "🎯" },
+        { name: "Home Depot", domain: "homedepot.com", icon: "🔨" },
+        { name: "Lowe's", domain: "lowes.com", icon: "🔧" },
+        { name: "Menards", domain: "menards.com", icon: "🔨" },
+        { name: "Costco", domain: "costco.com", icon: "📦" },
+        { name: "Sam's Club", domain: "samsclub.com", icon: "📦" },
+        { name: "BJ's Wholesale", domain: "bjs.com", icon: "📦" },
+        { name: "Meijer", domain: "meijer.com", icon: "🛒" },
+        { name: "Kohl's", domain: "kohls.com", icon: "🏬" },
+        { name: "JCPenney", domain: "jcpenney.com", icon: "🏬" },
+        { name: "Macy's", domain: "macys.com", icon: "🏬" },
+        { name: "Dick's Sporting Goods", domain: "dickssportinggoods.com", icon: "⚽" },
+        { name: "Best Buy", domain: "bestbuy.com", icon: "🖥️" },
+        { name: "Staples", domain: "staples.com", icon: "📎" },
+        { name: "Office Depot", domain: "officedepot.com", icon: "📎" },
+        { name: "Walmart Neighborhood Mkt", domain: "walmart.com", icon: "🔵" },
+      ]
+    }
+  },
+  "Grocery Anchor": {
+    icon: "🛒",
+    sub: {
+      "Grocery Anchor": [
+        { name: "Kroger", domain: "kroger.com", icon: "🛒" },
+        { name: "Meijer", domain: "meijer.com", icon: "🛒" },
+        { name: "Publix", domain: "publix.com", icon: "🛒" },
+        { name: "Safeway", domain: "safeway.com", icon: "🛒" },
+        { name: "Albertsons", domain: "albertsons.com", icon: "🛒" },
+        { name: "H-E-B", domain: "heb.com", icon: "🛒" },
+        { name: "Jewel-Osco", domain: "jewelosco.com", icon: "🛒" },
+        { name: "Mariano's", domain: "marianos.com", icon: "🛒" },
+        { name: "Harris Teeter", domain: "harristeeter.com", icon: "🛒" },
+        { name: "Stop & Shop", domain: "stopandshop.com", icon: "🛒" },
+        { name: "Giant Food", domain: "giantfood.com", icon: "🛒" },
+        { name: "Food Lion", domain: "foodlion.com", icon: "🛒" },
+        { name: "Winn-Dixie", domain: "winndixie.com", icon: "🛒" },
+        { name: "Hy-Vee", domain: "hy-vee.com", icon: "🛒" },
+        { name: "Wegmans", domain: "wegmans.com", icon: "🛒" },
+        { name: "Giant Eagle", domain: "gianteagle.com", icon: "🦅" },
+        { name: "WinCo Foods", domain: "wincofoods.com", icon: "🛒" },
+        { name: "Stater Bros", domain: "staterbros.com", icon: "🛒" },
+        { name: "Aldi", domain: "aldi.us", icon: "🛒" },
+        { name: "Lidl", domain: "lidl.com", icon: "🛒" },
+        { name: "Save-A-Lot", domain: "save-a-lot.com", icon: "🛒" },
+        { name: "Trader Joe's", domain: "traderjoes.com", icon: "🌺" },
+        { name: "Whole Foods", domain: "wholefoodsmarket.com", icon: "🥦" },
+        { name: "Sprouts", domain: "sprouts.com", icon: "🥦" },
+        { name: "The Fresh Market", domain: "thefreshmarket.com", icon: "🥦" },
+        { name: "Natural Grocers", domain: "naturalgrocers.com", icon: "🥦" },
+      ]
+    }
+  },
+  "Junior Anchor": {
+    icon: "🏬",
+    sub: {
+      "Junior Anchor": [
+        { name: "TJ Maxx", domain: "tjmaxx.tjx.com", icon: "👗" },
+        { name: "Marshalls", domain: "marshalls.com", icon: "👜" },
+        { name: "Ross", domain: "rossstores.com", icon: "🏷️" },
+        { name: "Burlington", domain: "burlington.com", icon: "🏷️" },
+        { name: "HomeGoods", domain: "homegoods.com", icon: "🏠" },
+        { name: "Nordstrom Rack", domain: "nordstromrack.com", icon: "👗" },
+        { name: "Saks Off 5th", domain: "saksoff5th.com", icon: "👗" },
+        { name: "Tuesday Morning", domain: "tuesdaymorning.com", icon: "🏷️" },
+        { name: "Big Lots", domain: "biglots.com", icon: "📦" },
+        { name: "Bed Bath & Beyond", domain: "bedbathandbeyond.com", icon: "🛏️" },
+        { name: "HomeMax", domain: "homemaxx.ca", icon: "🏠" },
+        { name: "Ollie's Bargain Outlet", domain: "ollies.us", icon: "🏷️" },
+        { name: "Ocean State Job Lot", domain: "oceanstatejoblot.com", icon: "🏷️" },
+        { name: "Anna's Linens", domain: "annaslinens.com", icon: "🛏️" },
+      ]
+    }
+  },
+  "Specialty Box": {
+    icon: "🎨",
+    sub: {
+      "Specialty Box": [
+        { name: "PetSmart", domain: "petsmart.com", icon: "🐾" },
+        { name: "Petco", domain: "petco.com", icon: "🐾" },
+        { name: "Pet Supplies Plus", domain: "petsuppliesplus.com", icon: "🐾" },
+        { name: "Michaels", domain: "michaels.com", icon: "🎨" },
+        { name: "Hobby Lobby", domain: "hobbylobby.com", icon: "🎨" },
+        { name: "Jo-Ann Fabrics", domain: "joann.com", icon: "🧵" },
+        { name: "Books-A-Million", domain: "booksamillion.com", icon: "📚" },
+        { name: "Barnes & Noble", domain: "barnesandnoble.com", icon: "📚" },
+        { name: "GameStop", domain: "gamestop.com", icon: "🎮" },
+        { name: "Bath & Body Works", domain: "bathandbodyworks.com", icon: "🧴" },
+        { name: "Victoria's Secret", domain: "victoriassecret.com", icon: "🎀" },
+        { name: "Crate & Barrel", domain: "crateandbarrel.com", icon: "🏠" },
+        { name: "West Elm", domain: "westelm.com", icon: "🏠" },
+        { name: "Pottery Barn", domain: "potterybarn.com", icon: "🏠" },
+        { name: "Williams-Sonoma", domain: "williams-sonoma.com", icon: "🍳" },
+        { name: "Tuesday Morning", domain: "tuesdaymorning.com", icon: "🏷️" },
+        { name: "AC Moore", domain: "acmoore.com", icon: "🎨" },
+        { name: "IKEA", domain: "ikea.com", icon: "🏠" },
+        { name: "Restoration Hardware", domain: "rh.com", icon: "🏠" },
+        { name: "The Container Store", domain: "containerstore.com", icon: "📦" },
+      ]
+    }
+  },
+  "Dollar / Value": {
+    icon: "💵",
+    sub: {
+      "Dollar / Value": [
+        { name: "Dollar Tree", domain: "dollartree.com", icon: "💵" },
+        { name: "Dollar General", domain: "dollargeneral.com", icon: "💵" },
+        { name: "Family Dollar", domain: "familydollar.com", icon: "💵" },
+        { name: "Five Below", domain: "fivebelow.com", icon: "5️⃣" },
+        { name: "99 Cents Only", domain: "99only.com", icon: "💵" },
+        { name: "Grocery Outlet", domain: "groceryoutlet.com", icon: "🛒" },
+        { name: "Aldi", domain: "aldi.us", icon: "🛒" },
+        { name: "Lidl", domain: "lidl.com", icon: "🛒" },
+      ]
+    }
+  },
+  "QSR": {
+    icon: "🍟",
+    sub: {
+      "QSR": [
+        { name: "McDonald's", domain: "mcdonalds.com", icon: "🍟" },
+        { name: "Wendy's", domain: "wendys.com", icon: "🍔" },
+        { name: "Burger King", domain: "bk.com", icon: "👑" },
+        { name: "Taco Bell", domain: "tacobell.com", icon: "🔔" },
+        { name: "Chick-fil-A", domain: "chick-fil-a.com", icon: "🐔" },
+        { name: "Popeyes", domain: "popeyes.com", icon: "🍗" },
+        { name: "KFC", domain: "kfc.com", icon: "🍗" },
+        { name: "Raising Cane's", domain: "raisingcanes.com", icon: "🍗" },
+        { name: "Wingstop", domain: "wingstop.com", icon: "🍗" },
+        { name: "Zaxby's", domain: "zaxbys.com", icon: "🍗" },
+        { name: "Bojangles", domain: "bojangles.com", icon: "🍗" },
+        { name: "Church's Chicken", domain: "churchs.com", icon: "🍗" },
+        { name: "Domino's", domain: "dominos.com", icon: "🍕" },
+        { name: "Pizza Hut", domain: "pizzahut.com", icon: "🍕" },
+        { name: "Papa John's", domain: "papajohns.com", icon: "🍕" },
+        { name: "Little Caesars", domain: "littlecaesars.com", icon: "🍕" },
+        { name: "Marco's Pizza", domain: "marcos.com", icon: "🍕" },
+        { name: "Jet's Pizza", domain: "jetspizza.com", icon: "🍕" },
+        { name: "Subway", domain: "subway.com", icon: "🥖" },
+        { name: "Jimmy John's", domain: "jimmyjohns.com", icon: "🥪" },
+        { name: "Jersey Mike's", domain: "jerseymikes.com", icon: "🥪" },
+        { name: "Firehouse Subs", domain: "firehousesubs.com", icon: "🥪" },
+        { name: "Arby's", domain: "arbys.com", icon: "🥩" },
+        { name: "Charleys", domain: "charleys.com", icon: "🥪" },
+        { name: "Culver's", domain: "culvers.com", icon: "🧀" },
+        { name: "Sonic", domain: "sonicdrivein.com", icon: "🍔" },
+        { name: "Whataburger", domain: "whataburger.com", icon: "🍔" },
+        { name: "Jack in the Box", domain: "jackinthebox.com", icon: "🍔" },
+        { name: "Hardee's", domain: "hardees.com", icon: "🍔" },
+        { name: "Carl's Jr.", domain: "carlsjr.com", icon: "🍔" },
+        { name: "Steak 'n Shake", domain: "steaknshake.com", icon: "🍔" },
+        { name: "Del Taco", domain: "deltaco.com", icon: "🌮" },
+        { name: "Panda Express", domain: "pandaexpress.com", icon: "🥡" },
+        { name: "Portillo's", domain: "portillos.com", icon: "🌭" },
+        { name: "Qdoba", domain: "qdoba.com", icon: "🌯" },
+        { name: "Moe's SW Grill", domain: "moes.com", icon: "🌮" },
+        { name: "Schlotzsky's", domain: "schlotzskys.com", icon: "🥪" },
+        { name: "McAlister's Deli", domain: "mcalistersdeli.com", icon: "🥪" },
+        { name: "Teriyaki Madness", domain: "teriyakimadness.com", icon: "🍱" },
+        { name: "Tropical Smoothie", domain: "tropicalsmoothiecafe.com", icon: "🥤" },
+        { name: "Jamba Juice", domain: "jamba.com", icon: "🥤" },
+        { name: "Auntie Anne's", domain: "auntieannes.com", icon: "🥨" },
+        { name: "Cinnabon", domain: "cinnabon.com", icon: "🍥" },
+        { name: "Wetzel's Pretzels", domain: "wetzels.com", icon: "🥨" },
+      ]
+    }
+  },
+  "Fast Casual": {
+    icon: "🌯",
+    sub: {
+      "Fast Casual": [
+        { name: "Chipotle", domain: "chipotle.com", icon: "🌯" },
+        { name: "Panera Bread", domain: "panerabread.com", icon: "🥐" },
+        { name: "Five Guys", domain: "fiveguys.com", icon: "🍔" },
+        { name: "Shake Shack", domain: "shakeshack.com", icon: "🍔" },
+        { name: "Smashburger", domain: "smashburger.com", icon: "🍔" },
+        { name: "Freddy's", domain: "freddys.com", icon: "🍔" },
+        { name: "Habit Burger", domain: "habitburger.com", icon: "🍔" },
+        { name: "MOD Pizza", domain: "modpizza.com", icon: "🍕" },
+        { name: "Blaze Pizza", domain: "blazepizza.com", icon: "🍕" },
+        { name: "Noodles & Co.", domain: "noodles.com", icon: "🍜" },
+        { name: "Potbelly", domain: "potbelly.com", icon: "🥪" },
+        { name: "Jason's Deli", domain: "jasonsdeli.com", icon: "🥪" },
+        { name: "Corner Bakery", domain: "cornerbakerycafe.com", icon: "🥐" },
+        { name: "Au Bon Pain", domain: "aubonpain.com", icon: "🥐" },
+        { name: "Einstein Bagels", domain: "einsteins.com", icon: "🥯" },
+        { name: "Bruegger's Bagels", domain: "brueggers.com", icon: "🥯" },
+        { name: "Zoes Kitchen", domain: "zoeskitchen.com", icon: "🥗" },
+        { name: "Sweetgreen", domain: "sweetgreen.com", icon: "🥗" },
+        { name: "Freshii", domain: "freshii.com", icon: "🥗" },
+        { name: "Cosi", domain: "getcosi.com", icon: "🥙" },
+        { name: "First Watch", domain: "firstwatch.com", icon: "🍳" },
+        { name: "Eggs Up Grill", domain: "eggsupgrill.com", icon: "🍳" },
+        { name: "Wingstop", domain: "wingstop.com", icon: "🍗" },
+        { name: "Raising Cane's", domain: "raisingcanes.com", icon: "🍗" },
+        { name: "Dave's Hot Chicken", domain: "daveshotchicken.com", icon: "🍗" },
+        { name: "Freebirds", domain: "freebirds.com", icon: "🌯" },
+        { name: "Moe's SW Grill", domain: "moes.com", icon: "🌮" },
+        { name: "Cava", domain: "cava.com", icon: "🥗" },
+        { name: "Torchy's Tacos", domain: "torchystacos.com", icon: "🌮" },
+        { name: "Which Wich", domain: "whichwich.com", icon: "🥪" },
+      ]
+    }
+  },
+  "Casual Dining": {
+    icon: "🍽️",
+    sub: {
+      "Casual Dining": [
+        { name: "Applebee's", domain: "applebees.com", icon: "🍽️" },
+        { name: "Chili's", domain: "chilis.com", icon: "🌶️" },
+        { name: "TGI Friday's", domain: "tgifridays.com", icon: "🍽️" },
+        { name: "Red Robin", domain: "redrobin.com", icon: "🍔" },
+        { name: "Buffalo Wild Wings", domain: "buffalowildwings.com", icon: "🍗" },
+        { name: "BJ's Brewhouse", domain: "bjsrestaurants.com", icon: "🍺" },
+        { name: "Olive Garden", domain: "olivegarden.com", icon: "🍝" },
+        { name: "Red Lobster", domain: "redlobster.com", icon: "🦞" },
+        { name: "Outback Steakhouse", domain: "outback.com", icon: "🥩" },
+        { name: "Texas Roadhouse", domain: "texasroadhouse.com", icon: "🥩" },
+        { name: "LongHorn Steakhouse", domain: "longhornsteakhouse.com", icon: "🥩" },
+        { name: "Logan's Roadhouse", domain: "logansroadhouse.com", icon: "🥩" },
+        { name: "Bob Evans", domain: "bobevans.com", icon: "🍳" },
+        { name: "Denny's", domain: "dennys.com", icon: "🍳" },
+        { name: "IHOP", domain: "ihop.com", icon: "🥞" },
+        { name: "Perkins", domain: "perkinsrestaurants.com", icon: "🥞" },
+        { name: "Cracker Barrel", domain: "crackerbarrel.com", icon: "🍳" },
+        { name: "Waffle House", domain: "wafflehouse.com", icon: "🧇" },
+        { name: "Golden Corral", domain: "goldencorral.com", icon: "🍽️" },
+        { name: "Dave & Buster's", domain: "daveandbusters.com", icon: "🎮" },
+        { name: "Main Event", domain: "mainevent.com", icon: "🎳" },
+        { name: "Bahama Breeze", domain: "bahamabreeze.com", icon: "🌴" },
+        { name: "Yard House", domain: "yardhouse.com", icon: "🍺" },
+        { name: "The Cheesecake Factory", domain: "thecheesecakefactory.com", icon: "🍰" },
+        { name: "P.F. Chang's", domain: "pfchangs.com", icon: "🥢" },
+        { name: "Bonefish Grill", domain: "bonefishgrill.com", icon: "🐟" },
+        { name: "Carrabba's", domain: "carrabbas.com", icon: "🍝" },
+        { name: "Seasons 52", domain: "seasons52.com", icon: "🍽️" },
+        { name: "Eddie V's", domain: "eddievs.com", icon: "🦞" },
+        { name: "Cheddar's Scratch Kitchen", domain: "cheddars.com", icon: "🍽️" },
+      ]
+    }
+  },
+  "Coffee / Café": {
+    icon: "☕",
+    sub: {
+      "Coffee / Café": [
+        { name: "Starbucks", domain: "starbucks.com", icon: "🟢" },
+        { name: "Dunkin'", domain: "dunkindonuts.com", icon: "🍩" },
+        { name: "7 Brew", domain: "7brew.com", icon: "☕" },
+        { name: "Biggby", domain: "biggby.com", icon: "☕" },
+        { name: "Tim Hortons", domain: "timhortons.com", icon: "☕" },
+        { name: "Caribou Coffee", domain: "cariboucoffee.com", icon: "☕" },
+        { name: "Peet's Coffee", domain: "peets.com", icon: "☕" },
+        { name: "Dutch Bros", domain: "dutchbros.com", icon: "☕" },
+        { name: "Scooter's Coffee", domain: "scooterscoffee.com", icon: "☕" },
+        { name: "The Human Bean", domain: "humanbeanco.com", icon: "☕" },
+        { name: "Black Rock Coffee", domain: "blackrockcoffee.com", icon: "☕" },
+        { name: "Ziggi's Coffee", domain: "ziggiscoffee.com", icon: "☕" },
+        { name: "PJ's Coffee", domain: "pjscoffee.com", icon: "☕" },
+        { name: "Gloria Jean's", domain: "gloriajeans.com", icon: "☕" },
+        { name: "Panera Bread", domain: "panerabread.com", icon: "🥐" },
+        { name: "Einstein Bagels", domain: "einsteins.com", icon: "🥯" },
+        { name: "Bruegger's Bagels", domain: "brueggers.com", icon: "🥯" },
+        { name: "Corner Bakery", domain: "cornerbakerycafe.com", icon: "🥐" },
+      ]
+    }
+  },
+  "Auto": {
+    icon: "🚗",
+    sub: {
+      "Gas / C-Store": [
+        { name: "Marathon", domain: "marathonbrand.com", icon: "⛽" },
+        { name: "BP", domain: "bp.com", icon: "⛽" },
+        { name: "Shell", domain: "shell.com", icon: "⛽" },
+        { name: "Exxon", domain: "exxon.com", icon: "⛽" },
+        { name: "Mobil", domain: "mobil.com", icon: "⛽" },
+        { name: "Chevron", domain: "chevron.com", icon: "⛽" },
+        { name: "Sunoco", domain: "sunoco.com", icon: "⛽" },
+        { name: "Citgo", domain: "citgo.com", icon: "⛽" },
+        { name: "Gulf", domain: "gulf.com", icon: "⛽" },
+        { name: "Speedway", domain: "speedway.com", icon: "⛽" },
+        { name: "GetGo", domain: "getgocafe.com", icon: "⛽" },
+        { name: "Circle K", domain: "circlek.com", icon: "🔵" },
+        { name: "7-Eleven", domain: "7-eleven.com", icon: "🏪" },
+        { name: "Sheetz", domain: "sheetz.com", icon: "⛽" },
+        { name: "Wawa", domain: "wawa.com", icon: "⛽" },
+        { name: "Kwik Trip", domain: "kwiktrip.com", icon: "⛽" },
+        { name: "Casey's", domain: "caseys.com", icon: "⛽" },
+        { name: "Buc-ee's", domain: "buc-ees.com", icon: "⛽" },
+        { name: "Love's Travel Stop", domain: "loves.com", icon: "⛽" },
+        { name: "Pilot Flying J", domain: "pilotflyingj.com", icon: "⛽" },
+        { name: "Cumberland Farms", domain: "cumberlandfarms.com", icon: "⛽" },
+        { name: "Thorntons", domain: "thorntons.com", icon: "⛽" },
+        { name: "RaceTrac", domain: "racetrac.com", icon: "⛽" },
+        { name: "Raceway", domain: "raceway.com", icon: "⛽" },
+        { name: "Maverick", domain: "maverik.com", icon: "⛽" },
+        { name: "Kum & Go", domain: "kumandgo.com", icon: "⛽" },
+        { name: "Holiday Stationstores", domain: "holidaystationstores.com", icon: "⛽" },
+      ],
+      "Car Wash": [
+        { name: "Mister Car Wash", domain: "mistercarwash.com", icon: "🚿" },
+        { name: "Zips Car Wash", domain: "zipscarwash.com", icon: "🚿" },
+        { name: "Tommy's Express", domain: "tommysexpress.com", icon: "🚿" },
+        { name: "Tidal Wave Auto Spa", domain: "tidalwaveautospa.com", icon: "🚿" },
+        { name: "Magnolia Car Wash", domain: "magnoliacarwash.com", icon: "🚿" },
+        { name: "Crew Carwash", domain: "crewcarwash.com", icon: "🚿" },
+        { name: "Quick Quack", domain: "qqcarwash.com", icon: "🚿" },
+        { name: "Splash Car Wash", domain: "splashcarwash.com", icon: "🚿" },
+        { name: "Autobell Car Wash", domain: "autobell.com", icon: "🚿" },
+        { name: "Hoffman Car Wash", domain: "hoffmancarwash.com", icon: "🚿" },
+      ],
+      "Oil Change": [
+        { name: "Jiffy Lube", domain: "jiffylube.com", icon: "🔧" },
+        { name: "Valvoline", domain: "valvoline.com", icon: "🔧" },
+        { name: "Take 5 Oil Change", domain: "take5oilchange.com", icon: "🔧" },
+        { name: "Grease Monkey", domain: "greasemonkey.com", icon: "🔧" },
+        { name: "Pennzoil", domain: "pennzoil.com", icon: "🔧" },
+        { name: "Express Oil Change", domain: "expressoil.com", icon: "🔧" },
+        { name: "Oil Can Henry's", domain: "oilcanhenrys.com", icon: "🔧" },
+        { name: "Heartland Automotive", domain: "heartlandauto.com", icon: "🔧" },
+      ],
+      "Parts / Repair": [
+        { name: "AutoZone", domain: "autozone.com", icon: "🔩" },
+        { name: "O'Reilly Auto Parts", domain: "oreillyauto.com", icon: "🔩" },
+        { name: "Advance Auto Parts", domain: "advanceautoparts.com", icon: "🔩" },
+        { name: "NAPA Auto Parts", domain: "napaonline.com", icon: "🔩" },
+        { name: "Firestone", domain: "firestonecompleteautocare.com", icon: "🔧" },
+        { name: "Midas", domain: "midas.com", icon: "🔧" },
+        { name: "Meineke", domain: "meineke.com", icon: "🔧" },
+        { name: "Pep Boys", domain: "pepboys.com", icon: "🔧" },
+        { name: "Monro", domain: "monro.com", icon: "🔧" },
+        { name: "Mavis Tires", domain: "mavistires.com", icon: "🔧" },
+        { name: "Discount Tire", domain: "discounttire.com", icon: "🔧" },
+        { name: "Bridgestone", domain: "bridgestoneretail.com", icon: "🔧" },
+        { name: "Goodyear", domain: "goodyear.com", icon: "🔧" },
+        { name: "Penske Auto", domain: "penskeautomotive.com", icon: "🚗" },
+      ],
+      "Dealership / Resale": [
+        { name: "CarMax", domain: "carmax.com", icon: "🚗" },
+        { name: "Carvana", domain: "carvana.com", icon: "🚗" },
+        { name: "DriveTime", domain: "drivetime.com", icon: "🚗" },
+        { name: "AutoNation", domain: "autonation.com", icon: "🚗" },
+        { name: "Lithia Motors", domain: "lithiamotors.com", icon: "🚗" },
+        { name: "Asbury Automotive", domain: "asburyauto.com", icon: "🚗" },
+        { name: "Hendrick Automotive", domain: "hendrickauto.com", icon: "🚗" },
+      ],
+    }
+  },
+  "Health & Wellness": {
+    icon: "💊",
+    sub: {
+      "Pharmacy": [
+        { name: "CVS", domain: "cvs.com", icon: "💊" },
+        { name: "Walgreens", domain: "walgreens.com", icon: "💊" },
+        { name: "Rite Aid", domain: "riteaid.com", icon: "💊" },
+        { name: "Walmart Pharmacy", domain: "walmart.com", icon: "💊" },
+        { name: "Kroger Pharmacy", domain: "kroger.com", icon: "💊" },
+      ],
+      "Fitness": [
+        { name: "Planet Fitness", domain: "planetfitness.com", icon: "💪" },
+        { name: "LA Fitness", domain: "lafitness.com", icon: "🏋️" },
+        { name: "Orangetheory", domain: "orangetheory.com", icon: "🔥" },
+        { name: "UFC Gym", domain: "ufcgym.com", icon: "🥊" },
+        { name: "Crunch Fitness", domain: "crunch.com", icon: "💪" },
+        { name: "24 Hour Fitness", domain: "24hourfitness.com", icon: "💪" },
+        { name: "Gold's Gym", domain: "goldsgym.com", icon: "💪" },
+        { name: "Anytime Fitness", domain: "anytimefitness.com", icon: "💪" },
+        { name: "F45 Training", domain: "f45training.com", icon: "💪" },
+        { name: "EōS Fitness", domain: "eosfitness.com", icon: "💪" },
+        { name: "Lifetime Fitness", domain: "lifetime.life", icon: "🏊" },
+        { name: "YMCA", domain: "ymca.net", icon: "🏊" },
+        { name: "Snap Fitness", domain: "snapfitness.com", icon: "💪" },
+        { name: "Pure Barre", domain: "purebarre.com", icon: "💃" },
+        { name: "Club Pilates", domain: "clubpilates.com", icon: "🧘" },
+        { name: "Solidcore", domain: "solidcore.co", icon: "🧘" },
+      ],
+      "Beauty / Personal": [
+        { name: "Ulta Beauty", domain: "ulta.com", icon: "💄" },
+        { name: "Sephora", domain: "sephora.com", icon: "💄" },
+        { name: "Great Clips", domain: "greatclips.com", icon: "✂️" },
+        { name: "Sport Clips", domain: "sportclips.com", icon: "✂️" },
+        { name: "Supercuts", domain: "supercuts.com", icon: "✂️" },
+        { name: "Fantastic Sams", domain: "fantasticsams.com", icon: "✂️" },
+        { name: "Cost Cutters", domain: "costcutters.com", icon: "✂️" },
+        { name: "SmartStyle", domain: "smartstyle.com", icon: "✂️" },
+        { name: "Hair Cuttery", domain: "haircuttery.com", icon: "✂️" },
+        { name: "Hand & Stone", domain: "handandstone.com", icon: "💆" },
+        { name: "Massage Envy", domain: "massageenvy.com", icon: "💆" },
+        { name: "European Wax Center", domain: "waxcenter.com", icon: "💆" },
+        { name: "Drybar", domain: "thedrybar.com", icon: "💇" },
+        { name: "Restore Hyper Wellness", domain: "restore.com", icon: "❄️" },
+      ],
+      "Urgent Care / Medical": [
+        { name: "AFC Urgent Care", domain: "afcurgentcare.com", icon: "🏥" },
+        { name: "FastMed Urgent Care", domain: "fastmed.com", icon: "🏥" },
+        { name: "MinuteClinic", domain: "minuteclinic.com", icon: "🏥" },
+        { name: "NextCare Urgent Care", domain: "nextcare.com", icon: "🏥" },
+        { name: "CityMD", domain: "citymd.com", icon: "🏥" },
+        { name: "Concentra", domain: "concentra.com", icon: "🏥" },
+        { name: "MedExpress", domain: "medexpress.com", icon: "🏥" },
+        { name: "Patient First", domain: "patientfirst.com", icon: "🏥" },
+      ],
+    }
+  },
+  "Banking / Finance": {
+    icon: "🏦",
+    sub: {
+      "National Banks": [
+        { name: "Chase", domain: "chase.com", icon: "🏦" },
+        { name: "Bank of America", domain: "bankofamerica.com", icon: "🏦" },
+        { name: "Wells Fargo", domain: "wellsfargo.com", icon: "🏦" },
+        { name: "US Bank", domain: "usbank.com", icon: "🏦" },
+        { name: "TD Bank", domain: "td.com", icon: "🏦" },
+        { name: "Truist", domain: "truist.com", icon: "🏦" },
+        { name: "Capital One", domain: "capitalone.com", icon: "🏦" },
+        { name: "Citizens Bank", domain: "citizensbank.com", icon: "🏦" },
+        { name: "Regions Bank", domain: "regions.com", icon: "🏦" },
+        { name: "Fifth Third", domain: "53.com", icon: "🏦" },
+        { name: "PNC", domain: "pnc.com", icon: "🏦" },
+        { name: "BMO Harris", domain: "bmoharris.com", icon: "🏦" },
+        { name: "CIBC Bank", domain: "cibc.com", icon: "🏦" },
+      ],
+      "Regional Banks": [
+        { name: "Key Bank", domain: "key.com", icon: "🔑" },
+        { name: "Huntington", domain: "huntington.com", icon: "🏦" },
+        { name: "First Federal", domain: "firstfederal.com", icon: "🏦" },
+        { name: "Comerica", domain: "comerica.com", icon: "🏦" },
+        { name: "Flagstar Bank", domain: "flagstar.com", icon: "🏦" },
+        { name: "Old National Bank", domain: "oldnational.com", icon: "🏦" },
+        { name: "FirstMerit", domain: "firstmerit.com", icon: "🏦" },
+        { name: "Park National Bank", domain: "parknationalbank.com", icon: "🏦" },
+        { name: "First Midwest Bank", domain: "firstmidwest.com", icon: "🏦" },
+        { name: "Wintrust", domain: "wintrust.com", icon: "🏦" },
+      ],
+      "Other Financial": [
+        { name: "Navy Federal CU", domain: "navyfederal.org", icon: "🏦" },
+        { name: "Ally Financial", domain: "ally.com", icon: "🏦" },
+        { name: "Mariner Finance", domain: "marinerfinance.com", icon: "💳" },
+        { name: "World Finance", domain: "loansbyworld.com", icon: "💳" },
+        { name: "OneMain Financial", domain: "onemainfinancial.com", icon: "💳" },
+        { name: "Advance America", domain: "advanceamerica.net", icon: "💳" },
+        { name: "ACE Cash Express", domain: "acecashexpress.com", icon: "💳" },
+        { name: "Check Into Cash", domain: "checkintocash.com", icon: "💳" },
+      ],
+    }
+  },
+  "Telecom": {
+    icon: "📱",
+    sub: {
+      "Telecom": [
+        { name: "T-Mobile", domain: "t-mobile.com", icon: "📱" },
+        { name: "Verizon", domain: "verizon.com", icon: "📱" },
+        { name: "AT&T", domain: "att.com", icon: "📱" },
+        { name: "Cricket Wireless", domain: "cricketwireless.com", icon: "📱" },
+        { name: "Boost Mobile", domain: "boostmobile.com", icon: "📱" },
+        { name: "Metro PCS", domain: "metrobyt-mobile.com", icon: "📱" },
+        { name: "Total Wireless", domain: "totalwireless.com", icon: "📱" },
+        { name: "Straight Talk", domain: "straighttalk.com", icon: "📱" },
+        { name: "US Cellular", domain: "uscellular.com", icon: "📱" },
+        { name: "Xfinity Mobile", domain: "xfinity.com", icon: "📱" },
+        { name: "Consumer Cellular", domain: "consumercellular.com", icon: "📱" },
+        { name: "Mint Mobile", domain: "mintmobile.com", icon: "📱" },
+        { name: "Visible", domain: "visible.com", icon: "📱" },
+        { name: "TracFone", domain: "tracfone.com", icon: "📱" },
+        { name: "Simple Mobile", domain: "simplemobile.com", icon: "📱" },
+        { name: "Net10 Wireless", domain: "net10wireless.com", icon: "📱" },
+      ]
+    }
+  },
+  "Custom": {
+    icon: "⭐",
+    sub: {
+      "Site Markers": [
+        { name: "Subject Site", domain: "", icon: "⭐" },
+        { name: "Anchor A", domain: "", icon: "🅐" },
+        { name: "Anchor B", domain: "", icon: "🅑" },
+        { name: "Outparcel", domain: "", icon: "🏗️" },
+        { name: "Proposed", domain: "", icon: "📐" },
+        { name: "Vacant", domain: "", icon: "🏚️" },
+        { name: "Comp #1", domain: "", icon: "1️⃣" },
+        { name: "Comp #2", domain: "", icon: "2️⃣" },
+        { name: "Comp #3", domain: "", icon: "3️⃣" },
+      ],
+    }
+  },
+};
+
+// ─── SECTOR AUTO-POPULATE QUERIES ─────────────────────────────────────────────
+// Broad category queries — finds ALL businesses of that type in the area (not just named brands)
+const SECTOR_SEARCH = {
+  "Power Center Anchor": "big box retail anchor store",
+  "Grocery Anchor": "grocery store supermarket",
+  "Junior Anchor": "off-price discount clothing store",
+  "Specialty Box": "specialty retail store",
+  "Dollar / Value": "dollar store discount value",
+  "QSR": "fast food restaurant drive-thru",
+  "Fast Casual": "fast casual restaurant",
+  "Casual Dining": "casual dining restaurant bar grill",
+  "Coffee / Café": "coffee shop cafe",
+  "Auto": "gas station fuel auto parts",
+  "Health & Wellness": "pharmacy gym fitness salon urgent care",
+  "Banking / Finance": "bank credit union financial",
+  "Telecom": "wireless phone carrier store",
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let map, trafficLayer;
+let subjectLocation = null;
+let currentHighlightColor = '#FFD700', currentOpacity = 0.35;
+let placedMarkers = [], highlightShapes = [];
+let radiiCircles = {};
+let logoCount = 0;
+let brandLookup = null;
+let _LogoOverlay = null; // defined inside initMap after Google Maps loads
+// Custom polygon draw state
+let drawMode = false, drawPoints = [], drawPolyline = null, drawCursorLine = null;
+let drawClickListener = null, drawDblClickListener = null, drawMoveListener = null;
+let drawVertexMarkers = [];
+
+// ─── KEY INIT ─────────────────────────────────────────────────────────────────
+function initWithKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key || !key.startsWith('AIza')) {
+    alert('Please enter a valid Google Maps API key (starts with AIza)');
+    return;
+  }
+  localStorage.setItem('reat_gmaps_key', key);
+  loadGoogleMaps(key);
+}
+
+function loadGoogleMaps(key) {
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geometry&loading=async&callback=initMap`;
+  script.async = true;
+  script.onerror = () => {
+    alert('Failed to load Google Maps. Check your API key and enabled APIs.');
+  };
+  document.head.appendChild(script);
+}
+
+// ─── BRAND LOOKUP ─────────────────────────────────────────────────────────────
+function buildBrandLookup() {
+  const lookup = {};
+  Object.values(SECTORS).forEach(sector => {
+    Object.values(sector.sub).forEach(brands => {
+      brands.forEach(b => {
+        lookup[b.name.toLowerCase()] = { domain: b.domain, icon: b.icon, name: b.name };
+      });
+    });
+  });
+  return lookup;
+}
+
+function lookupBrand(placeName) {
+  if (!brandLookup) return null;
+  const n = placeName.toLowerCase().trim();
+  if (brandLookup[n]) return brandLookup[n];
+  for (const [key, val] of Object.entries(brandLookup)) {
+    if (n.includes(key) || key.includes(n.replace(/[^a-z0-9 ]/g, ''))) return val;
+  }
+  return null;
+}
+
+// Check for saved key
+window.addEventListener('DOMContentLoaded', () => {
+  populateSectors(SECTORS);
+  brandLookup = buildBrandLookup();
+  const saved = localStorage.getItem('reat_gmaps_key');
+  if (saved) {
+    document.getElementById('keyScreen').style.display = 'none';
+    loadGoogleMaps(saved);
+  }
+});
+
+// ─── MAP INIT ─────────────────────────────────────────────────────────────────
+function initMap() {
+  document.getElementById('keyScreen').style.display = 'none';
+
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: 41.455, lng: -81.917 }, // Westlake, OH
+    zoom: 17,
+    mapTypeId: 'satellite',
+    tilt: 0,
+    disableDefaultUI: true,
+    gestureHandling: 'greedy'
+  });
+
+  // ─── HTML Logo Overlay (OverlayView with real Clearbit logos + leader line) ──
+  _LogoOverlay = class extends google.maps.OverlayView {
+    constructor(pos, name, domain, icon) {
+      super();
+      this._anchorPos = pos; // fixed pin location, never changes
+      this._pos = pos;       // draggable label position
+      this._name = name; this._domain = domain; this._icon = icon;
+    }
+    onAdd() {
+      const el = document.createElement('div');
+      el.style.cssText = 'position:absolute;';
+      const sn = this._name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      el.innerHTML = `<div class="lo-wrap">
+        ${this._domain
+          ? `<img src="https://logo.clearbit.com/${this._domain}?size=24" width="20" height="20" class="lo-img" onerror="this.style.display='none'">`
+          : `<span style="font-size:15px;line-height:1;">${this._icon}</span>`}
+        <span class="lo-name">${sn}</span>
+        <span class="lo-x">×</span>
+      </div>`;
+      const wrap = el.querySelector('.lo-wrap');
+      const xBtn = el.querySelector('.lo-x');
+      wrap.addEventListener('mouseenter', () => xBtn.style.display='flex');
+      wrap.addEventListener('mouseleave', () => xBtn.style.display='none');
+      xBtn.addEventListener('click', e => { e.stopPropagation(); this.setMap(null); });
+
+      // Leader line from anchor pin to dragged label
+      this._line = new google.maps.Polyline({
+        path: [this._anchorPos, this._anchorPos],
+        strokeColor: '#555',
+        strokeWeight: 1.5,
+        strokeOpacity: 0.65,
+        map: null
+      });
+      // Anchor dot at the original pin location
+      this._dot = new google.maps.Marker({
+        position: this._anchorPos,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 4,
+          fillColor: '#555',
+          fillOpacity: 0.85,
+          strokeColor: '#fff',
+          strokeWeight: 1.5
+        },
+        map: null
+      });
+
+      let dragging=false, sx, sy, sp;
+      wrap.addEventListener('mousedown', e => {
+        if (e.target===xBtn) return;
+        dragging=true; sx=e.clientX; sy=e.clientY; sp=this._pos;
+        e.preventDefault(); e.stopPropagation();
+      });
+      const onMove = e => {
+        if (!dragging) return;
+        const proj = this.getProjection();
+        const pt = proj.fromLatLngToDivPixel(sp);
+        this._pos = proj.fromDivPixelToLatLng(new google.maps.Point(pt.x+e.clientX-sx, pt.y+e.clientY-sy));
+        this.draw();
+      };
+      const onUp = () => { dragging=false; };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      this._el = el;
+      this.getPanes().overlayMouseTarget.appendChild(el);
+    }
+    draw() {
+      const proj = this.getProjection();
+      const pt = proj.fromLatLngToDivPixel(this._pos);
+      if (pt && this._el) { this._el.style.left=pt.x+'px'; this._el.style.top=pt.y+'px'; }
+
+      // Show leader line when bubble has been dragged far enough from anchor
+      const anchorPt = proj.fromLatLngToDivPixel(this._anchorPos);
+      if (pt && anchorPt && this._line && this._dot) {
+        const dx = pt.x - anchorPt.x, dy = pt.y - anchorPt.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > 24) {
+          this._line.setPath([this._anchorPos, this._pos]);
+          this._line.setMap(this.getMap());
+          this._dot.setMap(this.getMap());
+        } else {
+          this._line.setMap(null);
+          this._dot.setMap(null);
+        }
+      }
+    }
+    onRemove() {
+      if (this._el) { this._el.parentNode && this._el.parentNode.removeChild(this._el); this._el=null; }
+      if (this._line) { this._line.setMap(null); this._line=null; }
+      if (this._dot) { this._dot.setMap(null); this._dot=null; }
+      placedMarkers = placedMarkers.filter(m=>m!==this);
+      logoCount = Math.max(0, logoCount-1);
+      const lc = document.getElementById('logoCount');
+      if (lc) lc.textContent = logoCount;
+    }
+  };
+
+  // Address + business search (Autocomplete — no type restriction)
+  const pacInput = document.getElementById('pac-input');
+  const autocomplete = new google.maps.places.Autocomplete(pacInput, {
+    componentRestrictions: { country: 'us' }
+  });
+  autocomplete.bindTo('bounds', map);
+  autocomplete.addListener('place_changed', () => {
+    const place = autocomplete.getPlace();
+    if (!place.geometry || !place.geometry.location) {
+      searchAddress(); // fallback to geocoder if no geometry
+      return;
+    }
+    _flyToPlace(place.geometry.location, place.formatted_address || place.name || '');
+  });
+
+  // Traffic layer (enabled by default to match toggle state)
+  trafficLayer = new google.maps.TrafficLayer();
+  trafficLayer.setMap(map);
+
+  // Coord display on move
+  map.addListener('mousemove', (e) => {
+    document.getElementById('coordDisplay').textContent =
+      e.latLng.lat().toFixed(5) + ', ' + e.latLng.lng().toFixed(5);
+  });
+
+  setStatus('Map ready — search a property address to begin');
+}
+
+// ─── SEARCH ───────────────────────────────────────────────────────────────────
+function searchAddress() {
+  const val = document.getElementById('pac-input').value.trim();
+  if (!val) return;
+  const geocoder = new google.maps.Geocoder();
+  geocoder.geocode({ address: val }, (results, status) => {
+    if (status === 'OK' && results[0]) {
+      _flyToPlace(results[0].geometry.location, results[0].formatted_address);
+    } else {
+      setStatus('Address not found — try a more specific query');
+    }
+  });
+}
+
+function _flyToPlace(location, label) {
+  subjectLocation = location;
+  map.setCenter(location);
+  map.setZoom(18);
+  document.getElementById('propertyBadge').textContent = label;
+  setStatus('Property loaded: ' + label);
+  // Drop subject property marker
+  new google.maps.Marker({
+    position: location, map,
+    title: 'Subject Property',
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 10,
+      fillColor: '#FFD700',
+      fillOpacity: 1,
+      strokeColor: '#1a2e1a',
+      strokeWeight: 2
+    },
+    zIndex: 20
+  });
+  // Re-center any active radius circles
+  Object.entries(radiiCircles).forEach(([miles, circle]) => {
+    circle.setCenter(location);
+  });
+}
+
+// ─── MAP TYPE ─────────────────────────────────────────────────────────────────
+function setMapType(type) {
+  if (!map) return;
+  map.setMapTypeId(type);
+  document.querySelectorAll('.map-type-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mt-' + type).classList.add('active');
+}
+
+// ─── ZOOM ─────────────────────────────────────────────────────────────────────
+function setZoom(val) {
+  if (!map) return;
+  // Invert: higher slider = more zoomed in (higher number)
+  map.setZoom(parseInt(val));
+  document.getElementById('zoomVal').textContent = val;
+}
+
+// ─── LAYER TOGGLES ────────────────────────────────────────────────────────────
+const layerStyles = {
+  roads_off: [
+    // Hide all road name labels, including interstates and highways
+    { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] }
+  ],
+  businesses_off: [
+    { featureType: 'poi', stylers: [{ visibility: 'off' }] }
+  ]
+};
+
+let layersState = { roads: true, businesses: true, traffic: true };
+
+function toggleLayer(layer) {
+  if (!map) return;
+  layersState[layer] = !layersState[layer];
+  const el = document.getElementById('tog-' + layer);
+  el.classList.toggle('on', layersState[layer]);
+
+  if (layer === 'traffic') {
+    layersState.traffic ? trafficLayer.setMap(map) : trafficLayer.setMap(null);
+    return;
+  }
+
+  // Apply combined styles
+  const styles = [];
+  if (!layersState.roads) styles.push(...layerStyles.roads_off);
+  if (!layersState.businesses) styles.push(...layerStyles.businesses_off);
+  map.setOptions({ styles });
+}
+
+// ─── RADII ────────────────────────────────────────────────────────────────────
+const RADIUS_COLORS = { 1: '#FFD700', 3: '#FF6B35', 5: '#00B4D8', 10: '#06D6A0' };
+
+function toggleRadius(miles) {
+  if (!map) return;
+  const el = document.getElementById('tog-r' + miles);
+  const isOn = el.classList.toggle('on');
+
+  if (isOn) {
+    const center = subjectLocation || map.getCenter();
+    if (!subjectLocation) setStatus('Tip: search a property first to anchor radii to your site');
+    const circle = new google.maps.Circle({
+      map,
+      center,
+      radius: miles * 1609.34,
+      fillColor: RADIUS_COLORS[miles],
+      fillOpacity: 0.05,
+      strokeColor: RADIUS_COLORS[miles],
+      strokeWeight: 1.5,
+      strokeOpacity: 0.8,
+      zIndex: 0
+    });
+    radiiCircles[miles] = circle;
+  } else {
+    if (radiiCircles[miles]) {
+      radiiCircles[miles].setMap(null);
+      delete radiiCircles[miles];
+    }
+  }
+}
+
+// ─── HIGHLIGHT / DRAW ────────────────────────────────────────────────────────
+function selectColor(el) {
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  currentHighlightColor = el.dataset.color;
+  if (drawPolyline) drawPolyline.setOptions({ strokeColor: currentHighlightColor });
+  if (drawCursorLine) drawCursorLine.setOptions({ strokeColor: currentHighlightColor });
+}
+
+function updateOpacity(val) {
+  currentOpacity = val / 100;
+  document.getElementById('opacityVal').textContent = val + '%';
+}
+
+function startDrawing() {
+  if (!map) return;
+  if (drawMode) cancelDrawing();
+  drawMode = true;
+  drawPoints = [];
+  drawVertexMarkers = [];
+  map.setOptions({ disableDoubleClickZoom: true });
+  document.getElementById('drawIndicator').style.display = 'block';
+  setStatus('Draw mode — click to add points, double-click to finish, ESC to cancel');
+
+  // Rubber-band cursor line: last point → mouse
+  drawMoveListener = map.addListener('mousemove', (e) => {
+    if (!drawMode || drawPoints.length === 0) return;
+    const from = drawPoints[drawPoints.length - 1];
+    if (drawCursorLine) {
+      drawCursorLine.setPath([from, e.latLng]);
+    } else {
+      drawCursorLine = new google.maps.Polyline({
+        path: [from, e.latLng],
+        map,
+        strokeColor: currentHighlightColor,
+        strokeWeight: 1.5,
+        strokeOpacity: 0.5
+      });
+    }
+  });
+
+  // Each click adds a vertex + dot marker
+  drawClickListener = map.addListener('click', (e) => {
+    if (!drawMode) return;
+    drawPoints.push(e.latLng);
+
+    // Vertex dot
+    const dot = new google.maps.Marker({
+      position: e.latLng, map,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 5,
+        fillColor: currentHighlightColor,
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 1.5
+      },
+      zIndex: 30
+    });
+    drawVertexMarkers.push(dot);
+
+    // Outline polyline: close shape when 3+ points
+    const path = drawPoints.length >= 3
+      ? [...drawPoints, drawPoints[0]]
+      : [...drawPoints];
+    if (drawPolyline) {
+      drawPolyline.setPath(path);
+      drawPolyline.setOptions({ strokeColor: currentHighlightColor });
+    } else {
+      drawPolyline = new google.maps.Polyline({
+        path, map,
+        strokeColor: currentHighlightColor,
+        strokeWeight: 2,
+        strokeOpacity: 1
+      });
+    }
+  });
+
+  // Double-click → finish
+  drawDblClickListener = map.addListener('dblclick', () => {
+    if (drawPoints.length < 3) { cancelDrawing(); return; }
+    // Google fires a click event right before dblclick — remove that extra point
+    drawPoints.pop();
+    finishDrawing();
+  });
+
+  document.addEventListener('keydown', escCancelDraw);
+}
+
+function escCancelDraw(e) {
+  if (e.key === 'Escape') cancelDrawing();
+}
+
+function _clearDrawOverlays() {
+  if (drawPolyline) { drawPolyline.setMap(null); drawPolyline = null; }
+  if (drawCursorLine) { drawCursorLine.setMap(null); drawCursorLine = null; }
+  drawVertexMarkers.forEach(m => m.setMap(null));
+  drawVertexMarkers = [];
+  if (drawClickListener) { google.maps.event.removeListener(drawClickListener); drawClickListener = null; }
+  if (drawDblClickListener) { google.maps.event.removeListener(drawDblClickListener); drawDblClickListener = null; }
+  if (drawMoveListener) { google.maps.event.removeListener(drawMoveListener); drawMoveListener = null; }
+  document.removeEventListener('keydown', escCancelDraw);
+  if (map) map.setOptions({ disableDoubleClickZoom: false });
+  document.getElementById('drawIndicator').style.display = 'none';
+}
+
+function cancelDrawing() {
+  drawMode = false;
+  drawPoints = [];
+  _clearDrawOverlays();
+}
+
+function finishDrawing() {
+  const pts = [...drawPoints];
+  _clearDrawOverlays();
+  drawMode = false;
+  drawPoints = [];
+
+  const polygon = new google.maps.Polygon({
+    paths: pts,
+    fillColor: currentHighlightColor,
+    fillOpacity: currentOpacity,
+    strokeColor: currentHighlightColor,
+    strokeWeight: 2,
+    editable: true,
+    map
+  });
+  highlightShapes.push(polygon);
+  setStatus('Highlight added — drag vertices to adjust. Draw again or place logos.');
+}
+
+function undoLastHighlight() {
+  if (highlightShapes.length === 0) return;
+  const last = highlightShapes.pop();
+  last.setMap(null);
+}
+
+function clearHighlights() {
+  highlightShapes.forEach(s => s.setMap(null));
+  highlightShapes = [];
+  setStatus('Highlights cleared');
+}
+
+// ─── BRAND LOGOS ─────────────────────────────────────────────────────────────
+function populateSectors(data) {
+  const container = document.getElementById('brandsScroll');
+  let html = '';
+  for (const [sectorName, sector] of Object.entries(data)) {
+    const totalBrands = Object.values(sector.sub).reduce((n, arr) => n + arr.length, 0);
+    const sectorKey = sectorName.replace(/[^a-z0-9]/gi, '_');
+    const multiSub = Object.keys(sector.sub).length > 1;
+    const hasAutoSearch = !!SECTOR_SEARCH[sectorName];
+    html += `<div class="sector-item" data-sector-key="${sectorKey}" data-sector-name="${sectorName}">
+      <div class="sector-header" onclick="toggleSectorAndFind(this.closest('.sector-item'))">
+        <span class="sector-arrow">▶</span>
+        <span class="sector-icon">${sector.icon}</span>
+        <span class="sector-name">${sectorName}</span>
+        ${hasAutoSearch ? `<span class="sector-find-tag">Find</span>` : ''}
+        <span class="sector-count">${totalBrands}</span>
+      </div>
+      <div class="sector-content">`;
+    for (const [subName, brands] of Object.entries(sector.sub)) {
+      if (multiSub) html += `<div class="sub-cat-label">${subName}</div>`;
+      html += `<div class="brand-grid">`;
+      brands.forEach(b => {
+        html += `<div class="brand-chip" onclick="placeBrand(this.dataset.brandName,this.dataset.brandIcon,this.dataset.domain)" data-name="${b.name.toLowerCase()}" data-brand-name="${b.name}" data-brand-icon="${b.icon}" data-domain="${b.domain}">
+          <span class="brand-chip-icon">${b.icon}</span>
+          <span class="brand-chip-name">${b.name}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div></div>`;
+  }
+  container.innerHTML = html;
+  loadCustomBrands();
+}
+
+function toggleSectorAndFind(item) {
+  const wasOpen = item.classList.contains('open');
+  item.classList.toggle('open');
+  // Auto-populate when opening a sector that has a query mapping
+  if (!wasOpen && map) {
+    const sectorName = item.dataset.sectorName;
+    if (SECTOR_SEARCH[sectorName]) {
+      findNearbySector(sectorName);
+    }
+  }
+}
+
+function findNearbySector(sectorName) {
+  const query = SECTOR_SEARCH[sectorName];
+  if (!query || !map) return;
+  const bounds = map.getBounds();
+  if (!bounds) { setStatus('Zoom to a location first, then expand a sector'); return; }
+  setStatus(`Searching for ${sectorName} in this area…`);
+  const service = new google.maps.places.PlacesService(map);
+  let foundCount = 0;
+
+  function handlePage(results, status, pagination) {
+    if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+      results.forEach(r => {
+        if (!r.geometry) return;
+        const matched = lookupBrand(r.name);
+        dropLogoMarker(r.geometry.location, r.name, matched ? matched.icon : '📍', matched ? matched.domain : '');
+        foundCount++;
+      });
+    }
+    if (pagination && pagination.hasNextPage) {
+      setTimeout(() => pagination.nextPage(), 500); // throttle to respect rate limits
+    } else {
+      setStatus(foundCount > 0
+        ? `${foundCount} ${sectorName} location(s) found — drag labels, click × to remove`
+        : `No ${sectorName} found in current view`);
+    }
+  }
+
+  service.textSearch({ query, bounds }, handlePage);
+}
+
+function filterBrands(query) {
+  const q = query.toLowerCase().trim();
+  const container = document.getElementById('brandsScroll');
+  if (!q) {
+    container.querySelectorAll('.brand-chip').forEach(c => c.style.display = '');
+    container.querySelectorAll('.sector-content').forEach(c => c.style.removeProperty('display'));
+    container.querySelectorAll('.sub-cat-label').forEach(c => c.style.display = '');
+    return;
+  }
+  container.querySelectorAll('.brand-chip').forEach(chip => {
+    chip.style.display = chip.dataset.name.includes(q) ? '' : 'none';
+  });
+  container.querySelectorAll('.sector-item').forEach(item => {
+    const hasMatch = [...item.querySelectorAll('.brand-chip')].some(c => c.style.display !== 'none');
+    item.querySelector('.sector-content').style.display = hasMatch ? 'block' : 'none';
+  });
+  container.querySelectorAll('.sub-cat-label').forEach(label => {
+    const grid = label.nextElementSibling;
+    if (grid && grid.classList.contains('brand-grid')) {
+      const hasVisible = [...grid.querySelectorAll('.brand-chip')].some(c => c.style.display !== 'none');
+      label.style.display = hasVisible ? '' : 'none';
+    }
+  });
+}
+
+function addCustomBrand() {
+  const nameEl = document.getElementById('customBrandName');
+  const domainEl = document.getElementById('customBrandDomain');
+  const name = nameEl.value.trim();
+  if (!name) { nameEl.focus(); return; }
+  const domain = domainEl.value.trim().replace(/^https?:\/\//,'');
+  const brand = { name, domain, icon: '📌' };
+  const customs = JSON.parse(localStorage.getItem('reat_custom_brands') || '[]');
+  customs.push(brand);
+  localStorage.setItem('reat_custom_brands', JSON.stringify(customs));
+  appendCustomBrandChip(brand);
+  nameEl.value = '';
+  domainEl.value = '';
+  setStatus(`"${name}" added to Custom`);
+  const customItem = document.querySelector('.sector-item[data-sector-key="Custom"]');
+  if (customItem && !customItem.classList.contains('open')) customItem.classList.add('open');
+}
+
+function appendCustomBrandChip(brand) {
+  const customItem = document.querySelector('.sector-item[data-sector-key="Custom"]');
+  if (!customItem) return;
+  const grids = customItem.querySelectorAll('.brand-grid');
+  const grid = grids[grids.length - 1];
+  if (!grid) return;
+  const chip = document.createElement('div');
+  chip.className = 'brand-chip';
+  chip.setAttribute('onclick', 'placeBrand(this.dataset.brandName,this.dataset.brandIcon,this.dataset.domain)');
+  chip.dataset.name = brand.name.toLowerCase();
+  chip.dataset.brandName = brand.name;
+  chip.dataset.brandIcon = brand.icon;
+  chip.dataset.domain = brand.domain || '';
+  chip.innerHTML = `<span class="brand-chip-icon">${brand.icon}</span><span class="brand-chip-name">${brand.name}</span>`;
+  grid.appendChild(chip);
+}
+
+function loadCustomBrands() {
+  const customs = JSON.parse(localStorage.getItem('reat_custom_brands') || '[]');
+  customs.forEach(b => appendCustomBrandChip(b));
+}
+
+function placeBrand(name, icon, domain) {
+  if (!map) return;
+  if (drawMode) cancelDrawing();
+  setStatus(`Searching for ${name} nearby…`);
+  const d = domain || (lookupBrand(name) || {}).domain || '';
+  const service = new google.maps.places.PlacesService(map);
+  service.textSearch({ query: name, bounds: map.getBounds() }, (results, status) => {
+    if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+      const toPlace = results.slice(0, 8);
+      toPlace.forEach(place => {
+        if (place.geometry && place.geometry.location) {
+          dropLogoMarker(place.geometry.location, place.name, icon, d);
+        }
+      });
+      setStatus(`${toPlace.length} ${name} location(s) placed — click any to remove`);
+    } else {
+      dropLogoMarker(map.getCenter(), name, icon, d);
+      setStatus(`${name} placed at map center — drag to reposition`);
+    }
+  });
+}
+
+function dropLogoMarker(latLng, name, icon, domain) {
+  if (!_LogoOverlay) return;
+  const overlay = new _LogoOverlay(latLng, name, domain || '', icon || '📍');
+  overlay.setMap(map);
+  placedMarkers.push(overlay);
+  logoCount++;
+  document.getElementById('logoCount').textContent = logoCount;
+}
+
+function clearMarkers() {
+  placedMarkers.forEach(m => { m.setMap(null); });
+  placedMarkers = [];
+  logoCount = 0;
+  document.getElementById('logoCount').textContent = 0;
+  setStatus('All logos cleared');
+}
+
+// ─── MAP CONTROLS ─────────────────────────────────────────────────────────────
+function rotateMap(deg) {
+  if (!map) return;
+  map.setHeading((map.getHeading() || 0) + deg);
+}
+
+function resetRotation() {
+  if (!map) return;
+  map.setHeading(0);
+  map.setTilt(0);
+}
+
+function myLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    map.setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    map.setZoom(18);
+    setStatus('Centered on your location');
+  });
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function showExport() {
+  document.getElementById('exportPanel').style.display = 'block';
+  document.getElementById('exportBackdrop').style.display = 'block';
+}
+
+function hideExport() {
+  document.getElementById('exportPanel').style.display = 'none';
+  document.getElementById('exportBackdrop').style.display = 'none';
+}
+
+function exportA4() {
+  if (!map) return;
+  hideExport();
+  // Stamp the branding strip with current property + date
+  const address = document.getElementById('propertyBadge').textContent;
+  const dateStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('pb-addr').textContent = address;
+  document.getElementById('pb-date').textContent = dateStr;
+  // Small delay so panel closes before print dialog opens
+  setTimeout(() => window.print(), 150);
+  setStatus('Print dialog opened — set orientation to Landscape, then Save as PDF.');
+}
+
+function exportImage(format) {
+  if (!map) return;
+  hideExport();
+  // Build Static Maps URL for standalone image download
+  const center = map.getCenter(), zoom = map.getZoom();
+  const type = map.getMapTypeId(), key = localStorage.getItem('reat_gmaps_key');
+  const p = [
+    `center=${center.lat()},${center.lng()}`,
+    `zoom=${zoom}`,
+    `size=640x360`,
+    `scale=2`,
+    `maptype=${type}`,
+    `key=${key}`
+  ];
+  if (format === 'jpg') p.push('format=jpg');
+  highlightShapes.forEach(poly => {
+    const pts = poly.getPath().getArray();
+    if (pts.length < 3) return;
+    const coords = pts.map(ll => `${ll.lat()},${ll.lng()}`).join('|');
+    const col = poly.fillColor.replace('#','');
+    p.push(`path=fillcolor:0x${col}55|color:0x${col}FF|weight:2|${coords}`);
+  });
+  placedMarkers.forEach(ov => {
+    if (!ov._anchorPos) return;
+    const ll = `${ov._anchorPos.lat()},${ov._anchorPos.lng()}`;
+    p.push(ov._domain
+      ? `markers=icon:${encodeURIComponent(`https://logo.clearbit.com/${ov._domain}?size=32`)}|${ll}`
+      : `markers=color:white|size:small|${ll}`);
+  });
+  window.open(`https://maps.googleapis.com/maps/api/staticmap?${p.join('&')}`, '_blank');
+  setStatus(`${format.toUpperCase()} opened in new tab — right-click to save.`);
+}
+
+function copyShareLink() {
+  if (!map) return;
+  const c = map.getCenter();
+  const z = map.getZoom();
+  const t = map.getMapTypeId();
+  const url = `https://www.google.com/maps/@${c.lat()},${c.lng()},${z}z/data=!3m1!1e3`;
+  navigator.clipboard.writeText(url).then(() => {
+    setStatus('Map link copied to clipboard');
+  });
+  hideExport();
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function setStatus(msg) {
+  document.getElementById('statusText').textContent = msg;
+}
+</script>
+
+<!-- Google Maps loaded dynamically after key entry -->
+</body>
+</html>
