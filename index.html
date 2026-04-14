@@ -1620,15 +1620,14 @@ function lookupBrand(placeName) {
   return null;
 }
 
-// Check for saved key
+// Hardcoded API key
+const GMAPS_API_KEY = 'AIzaSyADpereQzvBuQoubmpzQOVVIndA7OweDaA';
+
 window.addEventListener('DOMContentLoaded', () => {
   populateSectors(SECTORS);
   brandLookup = buildBrandLookup();
-  const saved = localStorage.getItem('reat_gmaps_key');
-  if (saved) {
-    document.getElementById('keyScreen').style.display = 'none';
-    loadGoogleMaps(saved);
-  }
+  document.getElementById('keyScreen').style.display = 'none';
+  loadGoogleMaps(GMAPS_API_KEY);
 });
 
 // ─── MAP INIT ─────────────────────────────────────────────────────────────────
@@ -2261,7 +2260,7 @@ function exportImage(format) {
   hideExport();
   // Build Static Maps URL for standalone image download
   const center = map.getCenter(), zoom = map.getZoom();
-  const type = map.getMapTypeId(), key = localStorage.getItem('reat_gmaps_key');
+  const type = map.getMapTypeId(), key = GMAPS_API_KEY;
   const p = [
     `center=${center.lat()},${center.lng()}`,
     `zoom=${zoom}`,
