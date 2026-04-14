@@ -2355,27 +2355,39 @@ function setStatus(msg) {
 </div><!-- /app-content -->
 
 <script>
-  // Wait for Clerk to load, then gate access
-  window.addEventListener('load', async () => {
-    await window.Clerk.load();
+  async function initClerk() {
+    try {
+      // Wait for Clerk script to be available
+      const maxWait = 10000;
+      const start = Date.now();
+      while (!window.Clerk && Date.now() - start < maxWait) {
+        await new Promise(r => setTimeout(r, 100));
+      }
 
-    if (window.Clerk.user) {
-      // Already signed in — show app
-      document.getElementById('clerk-login-screen').style.display = 'none';
-      document.getElementById('app-content').style.display = 'block';
-    } else {
-      // Show sign-in widget
-      window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'));
+      if (!window.Clerk) {
+        document.getElementById('clerk-sign-in').innerHTML = '<p style="color:#cba040;">Login failed to load. Please refresh.</p>';
+        return;
+      }
 
-      // Listen for sign-in
-      window.Clerk.addListener(({ user }) => {
-        if (user) {
-          document.getElementById('clerk-login-screen').style.display = 'none';
-          document.getElementById('app-content').style.display = 'block';
-        }
-      });
+      await window.Clerk.load();
+
+      if (window.Clerk.user) {
+        document.getElementById('clerk-login-screen').style.display = 'none';
+        document.getElementById('app-content').style.display = 'block';
+      } else {
+        window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'));
+        window.Clerk.addListener(({ user }) => {
+          if (user) {
+            document.getElementById('clerk-login-screen').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+          }
+        });
+      }
+    } catch (e) {
+      document.getElementById('clerk-sign-in').innerHTML = '<p style="color:#cba040;">Login error: ' + e.message + '</p>';
     }
-  });
+  }
+  window.addEventListener('DOMContentLoaded', initClerk);
 </script>
 </body>
 </html>
