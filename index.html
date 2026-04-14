@@ -861,7 +861,7 @@
   async
   crossorigin="anonymous"
   data-clerk-publishable-key="pk_test_ZXF1YWwtb3J5eC0yNy5jbGVyay5hY2NvdW50cy5kZXYk"
-  src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+  src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
   type="text/javascript"
 ></script>
 </head>
@@ -2369,7 +2369,7 @@ function setStatus(msg) {
         return;
       }
 
-      await window.Clerk.load();
+      await window.Clerk.load({ routerPush: () => {}, routerReplace: () => {} });
 
       if (window.Clerk.user) {
         document.getElementById('clerk-login-screen').style.display = 'none';
