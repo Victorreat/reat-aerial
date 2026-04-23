@@ -843,6 +843,7 @@
   }
   #app-content { display: none; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script
   async
   crossorigin="anonymous"
@@ -2620,230 +2621,103 @@ function exportPrint(size) {
   setStatus(`Print dialog opened — ${size} Landscape · Save as PDF.`);
 }
 
-// ─── CANVAS-BASED IMAGE EXPORT ──────────────────────────────────────────────
-// Composites: Static Map base + highlights + radii + logo pins + branding
+// ─── SCREEN CAPTURE EXPORT ──────────────────────────────────────────────────
+// Captures EXACTLY what's on screen — map, logos, highlights, radii — landscape
 async function exportImage(format) {
   if (!map) return;
   hideExport();
-  setStatus('Generating export — please wait…');
+  setStatus('Capturing your map — please wait…');
 
-  const center = map.getCenter(), zoom = map.getZoom();
-  const mapType = map.getMapTypeId();
+  const mapContainer = document.querySelector('.map-container');
 
-  // Static Maps API max: 640x640 at scale=2 → 1280x1280 actual px
-  const SM_W = 640, SM_H = 452; // ~1.414:1 (A-series ratio)
-  const SCALE = 2;
-  const CW = SM_W * SCALE, CH = SM_H * SCALE; // 1280 x 904
-
-  const canvas = document.createElement('canvas');
-  canvas.width = CW; canvas.height = CH;
-  const ctx = canvas.getContext('2d');
+  // Temporarily hide UI controls that shouldn't appear in export
+  const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator');
+  hideEls.forEach(el => el.style.display = 'none');
+  // Hide pin hover buttons
+  document.querySelectorAll('.lo-pin-x, .lo-pin-upload').forEach(el => el.style.setProperty('display','none','important'));
 
   try {
-    // 1 — Static Map base layer
-    const smUrl = `https://maps.googleapis.com/maps/api/staticmap?` +
-      `center=${center.lat()},${center.lng()}&zoom=${zoom}` +
-      `&size=${SM_W}x${SM_H}&scale=${SCALE}&maptype=${mapType}&key=${GMAPS_API_KEY}`;
-    const baseImg = await _loadImg(smUrl);
-    ctx.drawImage(baseImg, 0, 0, CW, CH);
-
-    // 2 — Highlight polygons
-    highlightShapes.forEach(poly => {
-      const path = poly.getPath().getArray();
-      if (path.length < 3) return;
-      ctx.beginPath();
-      path.forEach((ll, i) => {
-        const p = _llToPx(ll, center, zoom, CW, CH);
-        i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
-      });
-      ctx.closePath();
-      ctx.fillStyle = _hexA(poly.fillColor, poly.fillOpacity || 0.35);
-      ctx.fill();
-      ctx.strokeStyle = poly.strokeColor || poly.fillColor;
-      ctx.lineWidth = 3;
-      ctx.stroke();
+    const canvas = await html2canvas(mapContainer, {
+      useCORS: true,
+      allowTaint: true,
+      scale: 2,
+      logging: false,
+      backgroundColor: '#1a2e1a',
+      imageTimeout: 5000,
     });
 
-    // 3 — Radius circles
-    for (const [miles, circle] of Object.entries(radiiCircles)) {
-      const cc = circle.getCenter();
-      const cp = _llToPx(cc, center, zoom, CW, CH);
-      const edge = google.maps.geometry.spherical.computeOffset(cc, circle.getRadius(), 90);
-      const ep = _llToPx(edge, center, zoom, CW, CH);
-      const r = Math.abs(ep.x - cp.x);
-      ctx.beginPath();
-      ctx.arc(cp.x, cp.y, r, 0, Math.PI * 2);
-      ctx.strokeStyle = circle.strokeColor;
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = circle.strokeOpacity || 0.8;
-      ctx.stroke();
-      ctx.fillStyle = _hexA(circle.fillColor, circle.fillOpacity || 0.05);
-      ctx.globalAlpha = 1;
-      ctx.fill();
-    }
+    // Restore hidden UI
+    hideEls.forEach(el => el.style.display = '');
+    document.querySelectorAll('.lo-pin-x, .lo-pin-upload').forEach(el => el.style.removeProperty('display'));
 
-    // 4 — Logo pins
-    for (const ov of placedMarkers) {
-      const px = _llToPx(ov._anchorPos, center, zoom, CW, CH);
-      if (px.x < -30 || px.x > CW + 30 || px.y < -30 || px.y > CH + 30) continue; // off-canvas
-      const R = 16; // pin radius in export px
+    // Add REAT branding strip at the bottom
+    const W = canvas.width, H = canvas.height;
+    const finalCanvas = document.createElement('canvas');
+    const SH = 48; // branding strip height
+    finalCanvas.width = W;
+    finalCanvas.height = H + SH;
+    const ctx = finalCanvas.getContext('2d');
 
-      // White circle background
-      ctx.beginPath();
-      ctx.arc(px.x, px.y, R, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+    // Draw captured map
+    ctx.drawImage(canvas, 0, 0);
 
-      // Try to draw logo image inside circle
-      let drewLogo = false;
-      const uploaded = getUploadedLogo(ov._logoKey);
-      const logoUrls = [];
-      if (uploaded) logoUrls.push(uploaded);
-      if (ov._domain) {
-        logoUrls.push(`https://logo.dev/${ov._domain}?token=pk_anonymous&size=64`);
-        logoUrls.push(`https://www.google.com/s2/favicons?sz=64&domain=${ov._domain}`);
-      }
-      for (const url of logoUrls) {
-        try {
-          const img = await _loadImg(url);
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(px.x, px.y, R - 2, 0, Math.PI * 2);
-          ctx.clip();
-          ctx.drawImage(img, px.x - R + 2, px.y - R + 2, (R - 2) * 2, (R - 2) * 2);
-          ctx.restore();
-          drewLogo = true;
-          break;
-        } catch {}
-      }
-
-      // Fallback: colored initial
-      if (!drewLogo) {
-        const hue = Math.abs(ov._name.split('').reduce((h, c) => h + c.charCodeAt(0), 0)) % 360;
-        ctx.beginPath();
-        ctx.arc(px.x, px.y, R - 2, 0, Math.PI * 2);
-        ctx.fillStyle = `hsl(${hue},55%,45%)`;
-        ctx.fill();
-        ctx.font = 'bold 14px sans-serif';
-        ctx.fillStyle = '#fff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(ov._name.charAt(0).toUpperCase(), px.x, px.y);
-      }
-
-      // Name label
-      ctx.font = '500 10px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      // Text shadow for readability
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillText(ov._name, px.x + 1, px.y + R + 3);
-      ctx.fillStyle = '#fff';
-      ctx.fillText(ov._name, px.x, px.y + R + 2);
-    }
-
-    // 5 — Branding strip
-    const SH = 32;
-    ctx.fillStyle = 'rgba(26,46,26,0.92)';
-    ctx.fillRect(0, CH - SH, CW, SH);
+    // Branding strip
+    ctx.fillStyle = 'rgba(26,46,26,0.95)';
+    ctx.fillRect(0, H, W, SH);
     ctx.fillStyle = '#cba040';
-    ctx.fillRect(0, CH - SH, CW, 2);
+    ctx.fillRect(0, H, W, 3);
+
+    const ty = H + SH / 2;
     ctx.textBaseline = 'middle';
-    const ty = CH - SH / 2;
-    ctx.font = 'bold 14px serif';
+
+    // REAT logo
+    ctx.font = 'bold 20px serif';
     ctx.fillStyle = '#cba040';
     ctx.textAlign = 'left';
-    ctx.fillText('REAT', 14, ty);
-    ctx.font = '8px monospace';
+    ctx.fillText('REAT', 20, ty);
+    ctx.font = '10px monospace';
     ctx.fillStyle = '#9aab8a';
-    ctx.fillText('COMMERCIAL REAL ESTATE', 56, ty);
+    ctx.fillText('COMMERCIAL REAL ESTATE', 80, ty);
+
+    // Property address
     const addr = document.getElementById('propertyBadge').textContent;
-    ctx.font = '500 11px sans-serif';
+    ctx.font = '500 14px sans-serif';
     ctx.fillStyle = '#f0ead8';
     ctx.textAlign = 'center';
-    ctx.fillText(addr, CW / 2, ty);
-    ctx.textAlign = 'right';
-    ctx.font = '8px monospace';
-    ctx.fillStyle = '#9aab8a';
-    ctx.fillText(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), CW - 130, ty);
-    ctx.fillStyle = '#cba040';
-    ctx.fillText('reatcommercial.com', CW - 14, ty);
+    ctx.fillText(addr, W / 2, ty);
 
-    // 6 — Download
+    // Date + URL
+    ctx.textAlign = 'right';
+    ctx.font = '10px monospace';
+    ctx.fillStyle = '#9aab8a';
+    ctx.fillText(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), W - 200, ty);
+    ctx.fillStyle = '#cba040';
+    ctx.fillText('reatcommercial.com', W - 20, ty);
+
+    // Download
     const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
     const ext = format === 'jpg' ? 'jpg' : 'png';
     const quality = format === 'jpg' ? 0.92 : undefined;
     const slug = addr.replace(/[^a-z0-9]/gi, '-').substring(0, 40) || 'export';
-    canvas.toBlob(blob => {
+
+    finalCanvas.toBlob(blob => {
+      if (!blob) { setStatus('Export failed — try PDF print instead'); return; }
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `REAT-Aerial-${slug}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setStatus(`${ext.toUpperCase()} downloaded — ${CW}×${CH}px`);
+      setStatus(`${ext.toUpperCase()} downloaded — ${finalCanvas.width}×${finalCanvas.height}px`);
     }, mime, quality);
 
   } catch (err) {
+    // Restore hidden UI on error
+    hideEls.forEach(el => el.style.display = '');
+    document.querySelectorAll('.lo-pin-x, .lo-pin-upload').forEach(el => el.style.removeProperty('display'));
     console.error('Export error:', err);
     setStatus('Export failed — use PDF print instead');
   }
-}
-
-// Load image via fetch (CORS-safe) with fallback
-function _loadImg(url) {
-  return new Promise((resolve, reject) => {
-    // For data URLs, load directly
-    if (url.startsWith('data:')) {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = url;
-      return;
-    }
-    // Try fetch for CORS
-    fetch(url, { mode: 'cors' })
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
-      .then(blob => {
-        const img = new Image();
-        const objUrl = URL.createObjectURL(blob);
-        img.onload = () => { URL.revokeObjectURL(objUrl); resolve(img); };
-        img.onerror = () => { URL.revokeObjectURL(objUrl); reject(); };
-        img.src = objUrl;
-      })
-      .catch(() => {
-        // Fallback: try direct load (may taint canvas for some sources but worth trying)
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = url;
-      });
-  });
-}
-
-// Lat/Lng → pixel on the export canvas (Mercator projection matching Static Maps)
-function _llToPx(latLng, center, zoom, cw, ch) {
-  const T = 256, s = Math.pow(2, zoom);
-  function toW(lat, lng) {
-    const siny = Math.min(Math.max(Math.sin(lat * Math.PI / 180), -0.9999), 0.9999);
-    return { x: T * (0.5 + lng / 360), y: T * (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI)) };
-  }
-  const cw2 = toW(center.lat(), center.lng());
-  const pw = toW(latLng.lat(), latLng.lng());
-  return { x: (pw.x - cw2.x) * s + cw / 2, y: (pw.y - cw2.y) * s + ch / 2 };
-}
-
-// Hex color + alpha → rgba string
-function _hexA(hex, a) {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.substring(0, 2), 16) || 0;
-  const g = parseInt(h.substring(2, 4), 16) || 0;
-  const b = parseInt(h.substring(4, 6), 16) || 0;
-  return `rgba(${r},${g},${b},${a})`;
 }
 
 function copyShareLink() {
