@@ -134,15 +134,20 @@
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .sidebar-scroll {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    flex-shrink: 0;
-    min-height: 0;
-    height: 100%;
   }
-  .sidebar::-webkit-scrollbar { width: 4px; }
-  .sidebar::-webkit-scrollbar-track { background: transparent; }
-  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .sidebar-scroll::-webkit-scrollbar { width: 5px; }
+  .sidebar-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+  .sidebar-scroll::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+  .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: var(--gold-light); }
 
   .sidebar-section {
     padding: 14px 16px;
@@ -156,6 +161,27 @@
     text-transform: uppercase;
     color: var(--text-muted);
     margin-bottom: 10px;
+  }
+
+  .section-label.collapsible {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+  }
+  .section-label.collapsible:hover { color: var(--gold); }
+  .section-label.collapsible::after {
+    content: '▾';
+    font-size: 10px;
+    transition: transform 0.2s;
+  }
+  .sidebar-section.collapsed .section-label.collapsible::after {
+    transform: rotate(-90deg);
+  }
+  .section-body {}
+  .sidebar-section.collapsed .section-body {
+    display: none;
   }
 
   /* SEARCH */
@@ -870,7 +896,7 @@
   <!-- SIDEBAR -->
   <div class="sidebar">
 
-    <!-- ADDRESS SEARCH -->
+    <!-- ADDRESS SEARCH (fixed at top) -->
     <div class="sidebar-section">
       <div class="section-label">Subject Property</div>
       <div class="search-wrap" id="pac-container">
@@ -879,113 +905,134 @@
       </div>
     </div>
 
-    <!-- MAP TYPE -->
-    <div class="sidebar-section">
-      <div class="section-label">Map Type</div>
-      <div class="map-type-row">
-        <button class="map-type-btn" id="mt-satellite" onclick="setMapType('satellite')">Satellite</button>
-        <button class="map-type-btn active" id="mt-hybrid" onclick="setMapType('hybrid')">Hybrid</button>
-        <button class="map-type-btn" id="mt-roadmap" onclick="setMapType('roadmap')">Road</button>
-      </div>
-    </div>
+    <!-- SCROLLABLE AREA -->
+    <div class="sidebar-scroll">
 
-    <!-- ZOOM -->
-    <div class="sidebar-section">
-      <div class="section-label">Zoom Level</div>
-      <div class="zoom-row">
-        <span style="font-size:11px; color: var(--text-muted);">Street</span>
-        <input type="range" class="zoom-slider" id="zoomSlider" min="14" max="21" value="17" oninput="setZoom(this.value)" />
-        <span style="font-size:11px; color: var(--text-muted);">Aerial</span>
-        <span class="zoom-val" id="zoomVal">17</span>
-      </div>
-    </div>
-
-    <!-- LAYER TOGGLES -->
-    <div class="sidebar-section">
-      <div class="section-label">Layers</div>
-      <div class="toggle-grid">
-        <div class="toggle-item on half" id="tog-roads" onclick="toggleLayer('roads')">
-          <span class="toggle-label"><span class="toggle-icon">🛣️</span> Road Names</span>
-          <div class="toggle-switch"></div>
-        </div>
-        <div class="toggle-item on half" id="tog-businesses" onclick="toggleLayer('businesses')">
-          <span class="toggle-label"><span class="toggle-icon">🏪</span> Businesses</span>
-          <div class="toggle-switch"></div>
-        </div>
-        <div class="toggle-item on" id="tog-traffic" onclick="toggleLayer('traffic')">
-          <span class="toggle-label"><span class="toggle-icon">🚗</span> Traffic</span>
-          <div class="toggle-switch"></div>
+      <!-- MAP TYPE -->
+      <div class="sidebar-section collapsed">
+        <div class="section-label collapsible" onclick="toggleSection(this)">Map Type</div>
+        <div class="section-body">
+          <div class="map-type-row">
+            <button class="map-type-btn" id="mt-satellite" onclick="setMapType('satellite')">Satellite</button>
+            <button class="map-type-btn active" id="mt-hybrid" onclick="setMapType('hybrid')">Hybrid</button>
+            <button class="map-type-btn" id="mt-roadmap" onclick="setMapType('roadmap')">Road</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- RADII -->
-    <div class="sidebar-section">
-      <div class="section-label">Trade Area Radius</div>
-      <div class="toggle-grid">
-        <div class="toggle-item half" id="tog-r1" onclick="toggleRadius(1)">
-          <span class="toggle-label"><span class="toggle-icon">⭕</span> 1 mi</span>
-          <div class="toggle-switch"></div>
-        </div>
-        <div class="toggle-item half" id="tog-r3" onclick="toggleRadius(3)">
-          <span class="toggle-label"><span class="toggle-icon">⭕</span> 3 mi</span>
-          <div class="toggle-switch"></div>
-        </div>
-        <div class="toggle-item half" id="tog-r5" onclick="toggleRadius(5)">
-          <span class="toggle-label"><span class="toggle-icon">⭕</span> 5 mi</span>
-          <div class="toggle-switch"></div>
-        </div>
-        <div class="toggle-item half" id="tog-r10" onclick="toggleRadius(10)">
-          <span class="toggle-label"><span class="toggle-icon">⭕</span> 10 mi</span>
-          <div class="toggle-switch"></div>
+      <!-- ZOOM -->
+      <div class="sidebar-section collapsed">
+        <div class="section-label collapsible" onclick="toggleSection(this)">Zoom Level</div>
+        <div class="section-body">
+          <div class="zoom-row">
+            <span style="font-size:11px; color: var(--text-muted);">Street</span>
+            <input type="range" class="zoom-slider" id="zoomSlider" min="14" max="21" value="17" oninput="setZoom(this.value)" />
+            <span style="font-size:11px; color: var(--text-muted);">Aerial</span>
+            <span class="zoom-val" id="zoomVal">17</span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- HIGHLIGHT TOOL -->
-    <div class="sidebar-section">
-      <div class="section-label">Highlight Subject Property</div>
-      <div class="color-row">
-        <div class="color-swatch selected" style="background:#FFD700" data-color="#FFD700" onclick="selectColor(this)"></div>
-        <div class="color-swatch" style="background:#FF6B35" data-color="#FF6B35" onclick="selectColor(this)"></div>
-        <div class="color-swatch" style="background:#00B4D8" data-color="#00B4D8" onclick="selectColor(this)"></div>
-        <div class="color-swatch" style="background:#06D6A0" data-color="#06D6A0" onclick="selectColor(this)"></div>
-        <div class="color-swatch" style="background:#FF006E" data-color="#FF006E" onclick="selectColor(this)"></div>
-        <div class="color-swatch" style="background:#FFFFFF" data-color="#FFFFFF" onclick="selectColor(this)"></div>
-        <button class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="startDrawing()">✏️ Draw</button>
-        <button class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="undoLastHighlight()">↩ Undo</button>
+      <!-- LAYER TOGGLES -->
+      <div class="sidebar-section collapsed">
+        <div class="section-label collapsible" onclick="toggleSection(this)">Layers</div>
+        <div class="section-body">
+          <div class="toggle-grid">
+            <div class="toggle-item on half" id="tog-roads" onclick="toggleLayer('roads')">
+              <span class="toggle-label"><span class="toggle-icon">🛣️</span> Road Names</span>
+              <div class="toggle-switch"></div>
+            </div>
+            <div class="toggle-item on half" id="tog-businesses" onclick="toggleLayer('businesses')">
+              <span class="toggle-label"><span class="toggle-icon">🏪</span> Businesses</span>
+              <div class="toggle-switch"></div>
+            </div>
+            <div class="toggle-item on" id="tog-traffic" onclick="toggleLayer('traffic')">
+              <span class="toggle-label"><span class="toggle-icon">🚗</span> Traffic</span>
+              <div class="toggle-switch"></div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="opacity-row">
-        <span class="opacity-label">Opacity</span>
-        <input type="range" class="zoom-slider" id="opacitySlider" min="10" max="70" value="35" oninput="updateOpacity(this.value)" style="flex:1"/>
-        <span class="zoom-val" id="opacityVal" style="width:32px;">35%</span>
-      </div>
-    </div>
 
-    <!-- NEARBY RETAILERS -->
-    <div class="sidebar-section" style="flex-shrink:0;">
-      <div class="section-label">Nearby Retailers</div>
-      <div class="cat-grid" id="catGrid"></div>
-    </div>
-
-    <!-- FIND SPECIFIC BRAND -->
-    <div class="sidebar-section" style="flex-shrink:0;">
-      <div class="section-label">Find Specific Brand</div>
-      <div class="manual-add-row">
-        <input type="text" class="manual-add-input name-input" id="brandSearchInput" placeholder="e.g. Starbucks" onkeydown="if(event.key==='Enter')findBrand()" />
-        <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" onclick="findBrand()">Find</button>
+      <!-- RADII -->
+      <div class="sidebar-section collapsed">
+        <div class="section-label collapsible" onclick="toggleSection(this)">Trade Area Radius</div>
+        <div class="section-body">
+          <div class="toggle-grid">
+            <div class="toggle-item half" id="tog-r1" onclick="toggleRadius(1)">
+              <span class="toggle-label"><span class="toggle-icon">⭕</span> 1 mi</span>
+              <div class="toggle-switch"></div>
+            </div>
+            <div class="toggle-item half" id="tog-r3" onclick="toggleRadius(3)">
+              <span class="toggle-label"><span class="toggle-icon">⭕</span> 3 mi</span>
+              <div class="toggle-switch"></div>
+            </div>
+            <div class="toggle-item half" id="tog-r5" onclick="toggleRadius(5)">
+              <span class="toggle-label"><span class="toggle-icon">⭕</span> 5 mi</span>
+              <div class="toggle-switch"></div>
+            </div>
+            <div class="toggle-item half" id="tog-r10" onclick="toggleRadius(10)">
+              <span class="toggle-label"><span class="toggle-icon">⭕</span> 10 mi</span>
+              <div class="toggle-switch"></div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- CUSTOM MARKER -->
-    <div class="sidebar-section" style="flex-shrink:0;">
-      <div class="section-label">Custom Marker</div>
-      <div class="manual-add-row">
-        <input type="text" class="manual-add-input name-input" id="customBrandName" placeholder="Label" />
-        <input type="text" class="manual-add-input domain-input" id="customBrandDomain" placeholder="domain.com" />
-        <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" onclick="addCustomBrand()">+ Add</button>
+      <!-- HIGHLIGHT TOOL -->
+      <div class="sidebar-section collapsed">
+        <div class="section-label collapsible" onclick="toggleSection(this)">Highlight Property</div>
+        <div class="section-body">
+          <div class="color-row">
+            <div class="color-swatch selected" style="background:#FFD700" data-color="#FFD700" onclick="selectColor(this)"></div>
+            <div class="color-swatch" style="background:#FF6B35" data-color="#FF6B35" onclick="selectColor(this)"></div>
+            <div class="color-swatch" style="background:#00B4D8" data-color="#00B4D8" onclick="selectColor(this)"></div>
+            <div class="color-swatch" style="background:#06D6A0" data-color="#06D6A0" onclick="selectColor(this)"></div>
+            <div class="color-swatch" style="background:#FF006E" data-color="#FF006E" onclick="selectColor(this)"></div>
+            <div class="color-swatch" style="background:#FFFFFF" data-color="#FFFFFF" onclick="selectColor(this)"></div>
+            <button class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="startDrawing()">✏️ Draw</button>
+            <button class="btn btn-outline" style="font-size:9px; padding:4px 8px;" onclick="undoLastHighlight()">↩ Undo</button>
+          </div>
+          <div class="opacity-row">
+            <span class="opacity-label">Opacity</span>
+            <input type="range" class="zoom-slider" id="opacitySlider" min="10" max="70" value="35" oninput="updateOpacity(this.value)" style="flex:1"/>
+            <span class="zoom-val" id="opacityVal" style="width:32px;">35%</span>
+          </div>
+        </div>
       </div>
-    </div>
+
+      <!-- NEARBY RETAILERS (open by default) -->
+      <div class="sidebar-section">
+        <div class="section-label collapsible" onclick="toggleSection(this)">Nearby Retailers</div>
+        <div class="section-body">
+          <div class="cat-grid" id="catGrid"></div>
+        </div>
+      </div>
+
+      <!-- FIND SPECIFIC BRAND -->
+      <div class="sidebar-section">
+        <div class="section-label collapsible" onclick="toggleSection(this)">Find Specific Brand</div>
+        <div class="section-body">
+          <div class="manual-add-row">
+            <input type="text" class="manual-add-input name-input" id="brandSearchInput" placeholder="e.g. Starbucks" onkeydown="if(event.key==='Enter')findBrand()" />
+            <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" onclick="findBrand()">Find</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CUSTOM MARKER -->
+      <div class="sidebar-section">
+        <div class="section-label collapsible" onclick="toggleSection(this)">Custom Marker</div>
+        <div class="section-body">
+          <div class="manual-add-row">
+            <input type="text" class="manual-add-input name-input" id="customBrandName" placeholder="Label" />
+            <input type="text" class="manual-add-input domain-input" id="customBrandDomain" placeholder="domain.com" />
+            <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" onclick="addCustomBrand()">+ Add</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sidebar-scroll -->
 
     <input type="file" id="logoUploadInput" accept="image/*" style="display:none;" />
   </div>
@@ -2421,6 +2468,10 @@ function copyShareLink() {
 }
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
+function toggleSection(label) {
+  label.closest('.sidebar-section').classList.toggle('collapsed');
+}
+
 function setStatus(msg) {
   document.getElementById('statusText').textContent = msg;
 }
