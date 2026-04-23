@@ -417,6 +417,22 @@
     color: var(--gold-light);
   }
 
+  /* PLACE MODE */
+  #placeLogoBtn.active {
+    background: rgba(186,140,54,0.25);
+    border-color: var(--gold);
+    color: var(--gold-light);
+  }
+  .map-container.place-mode { cursor: crosshair !important; }
+  .map-container.place-mode #map { cursor: crosshair !important; }
+  .place-indicator {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    background: rgba(186,140,54,0.92); color: #fff; font-size: 11px;
+    padding: 5px 14px; border-radius: 6px; z-index: 10; pointer-events: none;
+    font-family: 'Inter', sans-serif; display: none;
+  }
+  .map-container.place-mode .place-indicator { display: block; }
+
   /* MAP CONTAINER */
   .map-container {
     flex: 1;
@@ -1030,8 +1046,9 @@
           <div class="manual-add-row">
             <input type="text" class="manual-add-input name-input" id="customBrandName" placeholder="Label" />
             <input type="text" class="manual-add-input domain-input" id="customBrandDomain" placeholder="domain.com" />
-            <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" onclick="addCustomBrand()">+ Add</button>
+            <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" onclick="addCustomBrand()">+ Center</button>
           </div>
+          <button class="btn btn-outline" id="placeLogoBtn" style="width:100%;margin-top:6px;font-size:10px;padding:5px 8px;" onclick="togglePlaceMode()">📍 Click Map to Place</button>
         </div>
       </div>
 
@@ -1044,6 +1061,7 @@
   <div class="map-container">
     <div id="map"></div>
     <div class="draw-indicator" id="drawIndicator">Draw Mode — Click to add as many points as needed — Double-click to finish — ESC to cancel</div>
+    <div class="place-indicator" id="placeIndicator">Click on the map to place logo — ESC to cancel</div>
 
     <!-- MAP CONTROLS -->
     <div class="map-controls">
@@ -2499,6 +2517,46 @@ function addCustomBrand() {
   setStatus(`"${name}" placed at map center — drag to reposition`);
   nameEl.value = '';
   domainEl.value = '';
+}
+
+// ─── PLACE MODE — CLICK MAP TO PLACE LOGO ───────────────────────────────────
+let _placeMode = false;
+let _placeModeListener = null;
+
+function togglePlaceMode() {
+  if (_placeMode) { exitPlaceMode(); return; }
+  const nameEl = document.getElementById('customBrandName');
+  const name = nameEl.value.trim();
+  if (!name) { nameEl.focus(); setStatus('Enter a label first'); return; }
+  if (!map) return;
+  _placeMode = true;
+  document.getElementById('placeLogoBtn').classList.add('active');
+  document.querySelector('.map-container').classList.add('place-mode');
+  setStatus('Click on the map to place "' + name + '" — ESC to cancel');
+  _placeModeListener = map.addListener('click', (e) => {
+    const nameEl2 = document.getElementById('customBrandName');
+    const domainEl = document.getElementById('customBrandDomain');
+    const n = nameEl2.value.trim();
+    if (!n) { exitPlaceMode(); return; }
+    const d = domainEl.value.trim().replace(/^https?:\/\//,'');
+    _dropLogoPin(e.latLng, n, d);
+    setStatus(`"${n}" placed — click again to place another, ESC to stop`);
+  });
+  // ESC to exit
+  document.addEventListener('keydown', _placeModeEsc);
+}
+
+function _placeModeEsc(e) {
+  if (e.key === 'Escape') exitPlaceMode();
+}
+
+function exitPlaceMode() {
+  _placeMode = false;
+  document.getElementById('placeLogoBtn').classList.remove('active');
+  document.querySelector('.map-container').classList.remove('place-mode');
+  if (_placeModeListener) { google.maps.event.removeListener(_placeModeListener); _placeModeListener = null; }
+  document.removeEventListener('keydown', _placeModeEsc);
+  setStatus('Place mode ended');
 }
 
 function _dropLogoPin(latLng, name, domain) {
