@@ -1262,8 +1262,8 @@ const SECTORS = {
       ]
     }
   },
-  "QSR": {
-    icon: "🍟",
+  "Restaurants": {
+    icon: "🍽️",
     sub: {
       "QSR": [
         { name: "McDonald's", domain: "mcdonalds.com", icon: "🍟" },
@@ -1278,18 +1278,26 @@ const SECTORS = {
         { name: "Zaxby's", domain: "zaxbys.com", icon: "🍗" },
         { name: "Bojangles", domain: "bojangles.com", icon: "🍗" },
         { name: "Church's Chicken", domain: "churchs.com", icon: "🍗" },
+        { name: "Dave's Hot Chicken", domain: "daveshotchicken.com", icon: "🍗" },
         { name: "Domino's", domain: "dominos.com", icon: "🍕" },
         { name: "Pizza Hut", domain: "pizzahut.com", icon: "🍕" },
         { name: "Papa John's", domain: "papajohns.com", icon: "🍕" },
         { name: "Little Caesars", domain: "littlecaesars.com", icon: "🍕" },
         { name: "Marco's Pizza", domain: "marcos.com", icon: "🍕" },
         { name: "Jet's Pizza", domain: "jetspizza.com", icon: "🍕" },
+        { name: "MOD Pizza", domain: "modpizza.com", icon: "🍕" },
+        { name: "Blaze Pizza", domain: "blazepizza.com", icon: "🍕" },
         { name: "Subway", domain: "subway.com", icon: "🥖" },
         { name: "Jimmy John's", domain: "jimmyjohns.com", icon: "🥪" },
         { name: "Jersey Mike's", domain: "jerseymikes.com", icon: "🥪" },
         { name: "Firehouse Subs", domain: "firehousesubs.com", icon: "🥪" },
         { name: "Arby's", domain: "arbys.com", icon: "🥩" },
         { name: "Charleys", domain: "charleys.com", icon: "🥪" },
+        { name: "Which Wich", domain: "whichwich.com", icon: "🥪" },
+        { name: "Potbelly", domain: "potbelly.com", icon: "🥪" },
+        { name: "Schlotzsky's", domain: "schlotzskys.com", icon: "🥪" },
+        { name: "McAlister's Deli", domain: "mcalistersdeli.com", icon: "🥪" },
+        { name: "Jason's Deli", domain: "jasonsdeli.com", icon: "🥪" },
         { name: "Culver's", domain: "culvers.com", icon: "🧀" },
         { name: "Sonic", domain: "sonicdrivein.com", icon: "🍔" },
         { name: "Whataburger", domain: "whataburger.com", icon: "🍔" },
@@ -1297,62 +1305,45 @@ const SECTORS = {
         { name: "Hardee's", domain: "hardees.com", icon: "🍔" },
         { name: "Carl's Jr.", domain: "carlsjr.com", icon: "🍔" },
         { name: "Steak 'n Shake", domain: "steaknshake.com", icon: "🍔" },
-        { name: "Del Taco", domain: "deltaco.com", icon: "🌮" },
-        { name: "Panda Express", domain: "pandaexpress.com", icon: "🥡" },
-        { name: "Portillo's", domain: "portillos.com", icon: "🌭" },
-        { name: "Qdoba", domain: "qdoba.com", icon: "🌯" },
-        { name: "Moe's SW Grill", domain: "moes.com", icon: "🌮" },
-        { name: "Schlotzsky's", domain: "schlotzskys.com", icon: "🥪" },
-        { name: "McAlister's Deli", domain: "mcalistersdeli.com", icon: "🥪" },
-        { name: "Teriyaki Madness", domain: "teriyakimadness.com", icon: "🍱" },
-        { name: "Tropical Smoothie", domain: "tropicalsmoothiecafe.com", icon: "🥤" },
-        { name: "Jamba Juice", domain: "jamba.com", icon: "🥤" },
-        { name: "Auntie Anne's", domain: "auntieannes.com", icon: "🥨" },
-        { name: "Cinnabon", domain: "cinnabon.com", icon: "🍥" },
-        { name: "Wetzel's Pretzels", domain: "wetzels.com", icon: "🥨" },
-      ]
-    }
-  },
-  "Fast Casual": {
-    icon: "🌯",
-    sub: {
-      "Fast Casual": [
-        { name: "Chipotle", domain: "chipotle.com", icon: "🌯" },
-        { name: "Panera Bread", domain: "panerabread.com", icon: "🥐" },
         { name: "Five Guys", domain: "fiveguys.com", icon: "🍔" },
         { name: "Shake Shack", domain: "shakeshack.com", icon: "🍔" },
         { name: "Smashburger", domain: "smashburger.com", icon: "🍔" },
         { name: "Freddy's", domain: "freddys.com", icon: "🍔" },
         { name: "Habit Burger", domain: "habitburger.com", icon: "🍔" },
-        { name: "MOD Pizza", domain: "modpizza.com", icon: "🍕" },
-        { name: "Blaze Pizza", domain: "blazepizza.com", icon: "🍕" },
-        { name: "Noodles & Co.", domain: "noodles.com", icon: "🍜" },
-        { name: "Potbelly", domain: "potbelly.com", icon: "🥪" },
-        { name: "Jason's Deli", domain: "jasonsdeli.com", icon: "🥪" },
-        { name: "Corner Bakery", domain: "cornerbakerycafe.com", icon: "🥐" },
-        { name: "Au Bon Pain", domain: "aubonpain.com", icon: "🥐" },
-        { name: "Einstein Bagels", domain: "einsteins.com", icon: "🥯" },
-        { name: "Bruegger's Bagels", domain: "brueggers.com", icon: "🥯" },
-        { name: "Zoes Kitchen", domain: "zoeskitchen.com", icon: "🥗" },
+        { name: "In-N-Out Burger", domain: "in-n-out.com", icon: "🍔" },
+        { name: "White Castle", domain: "whitecastle.com", icon: "🍔" },
+        { name: "Del Taco", domain: "deltaco.com", icon: "🌮" },
+        { name: "Torchy's Tacos", domain: "torchystacos.com", icon: "🌮" },
+        { name: "Panda Express", domain: "pandaexpress.com", icon: "🥡" },
+        { name: "Teriyaki Madness", domain: "teriyakimadness.com", icon: "🍱" },
+        { name: "Portillo's", domain: "portillos.com", icon: "🌭" },
+        { name: "Tropical Smoothie", domain: "tropicalsmoothiecafe.com", icon: "🥤" },
+        { name: "Jamba Juice", domain: "jamba.com", icon: "🥤" },
+        { name: "Auntie Anne's", domain: "auntieannes.com", icon: "🥨" },
+        { name: "Cinnabon", domain: "cinnabon.com", icon: "🍥" },
+        { name: "Wetzel's Pretzels", domain: "wetzels.com", icon: "🥨" },
+      ],
+      "Fast Casual": [
+        { name: "Chipotle", domain: "chipotle.com", icon: "🌯" },
+        { name: "Panera Bread", domain: "panerabread.com", icon: "🥐" },
+        { name: "Qdoba", domain: "qdoba.com", icon: "🌯" },
+        { name: "Moe's SW Grill", domain: "moes.com", icon: "🌮" },
+        { name: "Freebirds", domain: "freebirds.com", icon: "🌯" },
+        { name: "Cava", domain: "cava.com", icon: "🥗" },
         { name: "Sweetgreen", domain: "sweetgreen.com", icon: "🥗" },
+        { name: "Zoes Kitchen", domain: "zoeskitchen.com", icon: "🥗" },
         { name: "Freshii", domain: "freshii.com", icon: "🥗" },
-        { name: "Cosi", domain: "getcosi.com", icon: "🥙" },
+        { name: "Noodles & Co.", domain: "noodles.com", icon: "🍜" },
         { name: "First Watch", domain: "firstwatch.com", icon: "🍳" },
         { name: "Eggs Up Grill", domain: "eggsupgrill.com", icon: "🍳" },
-        { name: "Wingstop", domain: "wingstop.com", icon: "🍗" },
-        { name: "Raising Cane's", domain: "raisingcanes.com", icon: "🍗" },
-        { name: "Dave's Hot Chicken", domain: "daveshotchicken.com", icon: "🍗" },
-        { name: "Freebirds", domain: "freebirds.com", icon: "🌯" },
-        { name: "Moe's SW Grill", domain: "moes.com", icon: "🌮" },
-        { name: "Cava", domain: "cava.com", icon: "🥗" },
-        { name: "Torchy's Tacos", domain: "torchystacos.com", icon: "🌮" },
-        { name: "Which Wich", domain: "whichwich.com", icon: "🥪" },
-      ]
-    }
-  },
-  "Casual Dining": {
-    icon: "🍽️",
-    sub: {
+        { name: "Corner Bakery", domain: "cornerbakerycafe.com", icon: "🥐" },
+        { name: "Au Bon Pain", domain: "aubonpain.com", icon: "🥐" },
+        { name: "Waba Grill", domain: "wabagrill.com", icon: "🍱" },
+        { name: "El Pollo Loco", domain: "elpolloloco.com", icon: "🍗" },
+        { name: "Zaxby's", domain: "zaxbys.com", icon: "🍗" },
+        { name: "PDQ", domain: "eatpdq.com", icon: "🍗" },
+        { name: "Slim Chickens", domain: "slimchickens.com", icon: "🍗" },
+      ],
       "Casual Dining": [
         { name: "Applebee's", domain: "applebees.com", icon: "🍽️" },
         { name: "Chili's", domain: "chilis.com", icon: "🌶️" },
@@ -1384,7 +1375,15 @@ const SECTORS = {
         { name: "Seasons 52", domain: "seasons52.com", icon: "🍽️" },
         { name: "Eddie V's", domain: "eddievs.com", icon: "🦞" },
         { name: "Cheddar's Scratch Kitchen", domain: "cheddars.com", icon: "🍽️" },
-      ]
+        { name: "Hooters", domain: "hooters.com", icon: "🍗" },
+        { name: "Twin Peaks", domain: "twinpeaksrestaurant.com", icon: "🍺" },
+        { name: "Benihana", domain: "benihana.com", icon: "🥢" },
+        { name: "Ruth's Chris", domain: "ruthschris.com", icon: "🥩" },
+        { name: "Fleming's", domain: "flemingssteakhouse.com", icon: "🥩" },
+        { name: "Capital Grille", domain: "thecapitalgrille.com", icon: "🥩" },
+        { name: "Maggiano's", domain: "maggianos.com", icon: "🍝" },
+        { name: "Cracker Barrel", domain: "crackerbarrel.com", icon: "🍳" },
+      ],
     }
   },
   "Coffee / Café": {
@@ -1798,28 +1797,28 @@ const SECTORS = {
 
 // ─── SECTOR AUTO-POPULATE QUERIES ─────────────────────────────────────────────
 // Broad category queries — finds ALL businesses of that type in the area (not just named brands)
+// Each category maps to an array of focused search queries.
+// toggleCategory fires ALL queries in parallel for better coverage.
 const SECTOR_SEARCH = {
-  "Power Center Anchor": "walmart target costco big box department store",
-  "Grocery Anchor": "grocery store supermarket food market",
-  "Junior Anchor": "discount clothing store tjmaxx ross marshalls burlington",
-  "Specialty Box": "pet store hobby craft home goods bookstore",
-  "Dollar / Value": "dollar store dollar general family dollar five below discount",
-  "QSR": "fast food burger chicken sandwich sub pizza taco restaurant",
-  "Fast Casual": "fast casual restaurant chipotle panera salad bowl",
-  "Casual Dining": "restaurant bar grill steakhouse casual dining",
-  "Coffee / Café": "coffee shop cafe bakery bagel",
-  "Auto": "gas station auto parts car wash oil change tire",
-  "Health & Wellness": "pharmacy drugstore gym fitness salon barber urgent care",
-  "Banking / Finance": "bank credit union financial services",
-  "Telecom": "cell phone store wireless carrier mobile",
-  "Home Improvement": "home improvement hardware paint lumber tool",
-  "Furniture / Mattress": "furniture store mattress home furnishings",
-  "Apparel / Shoes": "clothing store shoes apparel fashion boutique",
-  "Electronics": "electronics store computer phone repair",
-  "Liquor / Wine": "liquor store wine spirits beer",
-  "Shipping / Services": "shipping store print copy storage UPS FedEx",
-  "Education / Childcare": "tutoring learning center daycare childcare preschool",
-  "Hotel / Hospitality": "hotel motel inn suites lodging",
+  "Power Center Anchor": ["walmart", "target", "costco", "sams club", "big box store", "department store", "kohls", "meijer"],
+  "Grocery Anchor": ["grocery store", "supermarket", "kroger", "publix", "aldi", "whole foods", "trader joes"],
+  "Junior Anchor": ["tjmaxx", "ross dress for less", "marshalls", "burlington", "homegoods", "nordstrom rack", "big lots"],
+  "Specialty Box": ["pet store", "hobby lobby", "michaels craft", "barnes noble bookstore", "bath body works", "crate barrel"],
+  "Dollar / Value": ["dollar general", "dollar tree", "family dollar", "five below", "99 cents store"],
+  "Restaurants": ["fast food restaurant", "burger restaurant", "pizza restaurant", "taco restaurant", "chicken restaurant", "sandwich shop", "chinese restaurant", "mexican restaurant", "italian restaurant", "sushi restaurant", "thai restaurant", "seafood restaurant", "steakhouse", "bar and grill", "diner", "wings restaurant", "barbecue restaurant", "mediterranean restaurant", "indian restaurant"],
+  "Coffee / Café": ["coffee shop", "starbucks", "dunkin", "cafe bakery", "bagel shop", "dutch bros coffee"],
+  "Auto": ["gas station", "auto parts store", "car wash", "oil change", "tire shop", "auto repair"],
+  "Health & Wellness": ["pharmacy", "drugstore", "gym fitness", "urgent care", "hair salon", "nail salon", "dentist"],
+  "Banking / Finance": ["bank branch", "credit union", "chase bank", "bank of america", "wells fargo"],
+  "Telecom": ["cell phone store", "verizon store", "t-mobile store", "at&t store", "cricket wireless"],
+  "Home Improvement": ["home depot", "lowes home improvement", "ace hardware", "paint store", "floor decor", "tractor supply"],
+  "Furniture / Mattress": ["furniture store", "mattress store", "ashley furniture", "rooms to go"],
+  "Apparel / Shoes": ["clothing store", "shoe store", "nike store", "old navy", "foot locker"],
+  "Electronics": ["best buy", "electronics store", "apple store", "gamestop", "phone repair"],
+  "Liquor / Wine": ["liquor store", "wine store", "total wine", "beer store"],
+  "Shipping / Services": ["ups store", "fedex office", "post office", "storage facility", "u-haul"],
+  "Education / Childcare": ["tutoring center", "learning center", "daycare", "childcare", "preschool"],
+  "Hotel / Hospitality": ["hotel", "motel", "marriott", "hilton hotel", "hampton inn"],
 };
 
 const CATEGORIES = [
@@ -1828,9 +1827,7 @@ const CATEGORIES = [
   { id: "Junior Anchor", label: "Jr. Anchor" },
   { id: "Specialty Box", label: "Specialty" },
   { id: "Dollar / Value", label: "Dollar" },
-  { id: "QSR", label: "QSR" },
-  { id: "Fast Casual", label: "Fast Casual" },
-  { id: "Casual Dining", label: "Dining" },
+  { id: "Restaurants", label: "Restaurants" },
   { id: "Coffee / Café", label: "Coffee" },
   { id: "Auto", label: "Auto" },
   { id: "Health & Wellness", label: "Health" },
@@ -2446,9 +2443,9 @@ function toggleCategory(catId) {
     return;
   }
 
-  // First click — search and place pins
-  const query = SECTOR_SEARCH[catId];
-  if (!query) return;
+  // First click — fire multiple focused searches for better coverage
+  const queries = SECTOR_SEARCH[catId];
+  if (!queries || !queries.length) return;
   const bounds = map.getBounds();
   if (!bounds) { setStatus('Zoom to a location first'); return; }
 
@@ -2457,29 +2454,41 @@ function toggleCategory(catId) {
   categoryMarkers[catId] = [];
 
   const service = new google.maps.places.PlacesService(map);
+  const seenPlaceIds = new Set(); // deduplicate across queries
   let foundCount = 0;
+  let pending = queries.length;
 
-  function handlePage(results, status, pagination) {
-    if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-      results.forEach(r => {
-        if (!r.geometry) return;
-        const matched = lookupBrand(r.name);
-        const ov = _dropLogoPin(r.geometry.location, r.name, matched ? matched.domain : '');
-        if (ov) categoryMarkers[catId].push(ov);
-        foundCount++;
-      });
-    }
-    if (pagination && pagination.hasNextPage) {
-      setTimeout(() => pagination.nextPage(), 500);
-    } else {
-      btn.querySelector('.cat-count').textContent = foundCount || '';
-      setStatus(foundCount > 0
-        ? `${foundCount} ${catId} location(s) found`
-        : `No ${catId} found in current view`);
-    }
+  function placeResult(r) {
+    if (!r.geometry || !r.place_id) return;
+    if (seenPlaceIds.has(r.place_id)) return;
+    seenPlaceIds.add(r.place_id);
+    const matched = lookupBrand(r.name);
+    const ov = _dropLogoPin(r.geometry.location, r.name, matched ? matched.domain : '');
+    if (ov) categoryMarkers[catId].push(ov);
+    foundCount++;
   }
 
-  service.textSearch({ query, bounds }, handlePage);
+  function checkDone() {
+    btn.querySelector('.cat-count').textContent = foundCount || '';
+    setStatus(foundCount > 0
+      ? `${foundCount} ${catId} location(s) found`
+      : `No ${catId} found in current view`);
+  }
+
+  queries.forEach(q => {
+    function handlePage(results, status, pagination) {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        results.forEach(placeResult);
+      }
+      if (pagination && pagination.hasNextPage) {
+        setTimeout(() => pagination.nextPage(), 500);
+      } else {
+        pending--;
+        if (pending <= 0) checkDone();
+      }
+    }
+    service.textSearch({ query: q, bounds }, handlePage);
+  });
 }
 
 function findBrand() {
