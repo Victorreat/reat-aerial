@@ -134,9 +134,15 @@
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     flex-shrink: 0;
+    min-height: 0;
+    height: 100%;
   }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
   .sidebar-section {
     padding: 14px 16px;
@@ -345,83 +351,44 @@
     white-space: nowrap;
   }
 
-  /* BRANDS */
-  .brands-scroll {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px 16px;
-  }
-
-  .brands-scroll::-webkit-scrollbar { width: 4px; }
-  .brands-scroll::-webkit-scrollbar-track { background: transparent; }
-  .brands-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .brand-search {
-    width: 100%;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid var(--border);
-    color: var(--text-light);
-    padding: 7px 10px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11px;
-    border-radius: 2px;
-    outline: none;
-    margin-bottom: 10px;
-  }
-  .brand-search::placeholder { color: var(--text-muted); }
-  .brand-search:focus { border-color: var(--gold); }
-
-  .brand-category {
-    margin-bottom: 12px;
-  }
-
-  .brand-cat-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 8px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid rgba(186,140,54,0.1);
-  }
-
-  .brand-grid {
+  /* CATEGORY BUTTONS */
+  .cat-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 5px;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
   }
-
-  .brand-chip {
+  .cat-btn {
+    padding: 7px 10px;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(186,140,54,0.12);
     border-radius: 3px;
-    padding: 5px 3px;
+    color: var(--text-light);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
     cursor: pointer;
     transition: all 0.15s;
-    text-align: center;
+    text-align: left;
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
-    gap: 3px;
   }
-  .brand-chip:hover { border-color: var(--gold); background: rgba(186,140,54,0.1); }
-
-  .brand-chip-icon {
-    font-size: 16px;
-    line-height: 1;
+  .cat-btn:hover { border-color: var(--gold); background: rgba(186,140,54,0.08); }
+  .cat-btn.active {
+    background: rgba(186,140,54,0.18);
+    border-color: var(--gold);
+    color: var(--gold-light);
   }
-
-  .brand-chip-name {
-    font-size: 7px;
+  .cat-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
     color: var(--text-muted);
-    line-height: 1.2;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    width: 100%;
-    padding: 0 2px;
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 8px;
+  }
+  .cat-btn.active .cat-count {
+    background: rgba(186,140,54,0.3);
+    color: var(--gold-light);
   }
 
   /* MAP CONTAINER */
@@ -627,37 +594,87 @@
     margin-top: 6px;
   }
 
-  /* Logo overlay bubbles */
-  .lo-wrap {
+  /* Logo pin overlays */
+  .lo-pin {
     transform: translate(-50%,-50%);
+    width: 40px; height: 40px;
     background: white;
-    border-radius: 8px;
-    padding: 4px 7px 4px 5px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.28);
+    border-radius: 50%;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.35);
     display: flex;
     align-items: center;
-    gap: 5px;
-    white-space: nowrap;
-    border: 1px solid rgba(0,0,0,0.08);
+    justify-content: center;
     cursor: move;
     position: relative;
+    border: 2px solid rgba(255,255,255,0.9);
+    transition: box-shadow 0.15s;
   }
-  .lo-img { object-fit: contain; border-radius: 2px; }
-  .lo-name { font-size: 10px; font-weight: 500; color: #222; font-family: 'DM Sans', sans-serif; }
-  .lo-x {
-    width: 13px; height: 13px;
+  .lo-pin:hover { box-shadow: 0 3px 16px rgba(0,0,0,0.5); }
+  .lo-pin-img {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    object-fit: contain;
+  }
+  .lo-pin-initial {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+  }
+  .lo-pin-tooltip {
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    display: none;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .lo-pin:hover .lo-pin-tooltip { display: block; }
+  .lo-pin-x {
+    position: absolute;
+    top: -4px; right: -4px;
+    width: 16px; height: 16px;
     background: #e74c3c;
     border-radius: 50%;
     color: white;
+    font-size: 10px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 11;
+  }
+  .lo-pin:hover .lo-pin-x { display: flex; }
+  .lo-pin-upload {
+    position: absolute;
+    bottom: -4px; right: -4px;
+    width: 16px; height: 16px;
+    background: var(--gold);
+    border-radius: 50%;
+    color: var(--green);
     font-size: 9px;
     display: none;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     line-height: 1;
-    flex-shrink: 0;
-    margin-left: 2px;
+    z-index: 11;
   }
+  .lo-pin:hover .lo-pin-upload { display: flex; }
 
   /* Print branding strip — hidden in app, shown on print */
   #print-branding {
@@ -683,7 +700,7 @@
   #print-branding .pb-url   { font-size:7px; color:#cba040; letter-spacing:0.1em; font-family:monospace; }
 
   @media print {
-    @page { size: A4 landscape; margin: 0; }
+    @page { size: A3 landscape; margin: 0; }  /* default; overridden by exportPrint() */
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     header, .sidebar, .status-bar, .export-panel, .overlay-backdrop,
     .map-controls, .draw-indicator, #keyScreen { display: none !important; }
@@ -691,6 +708,7 @@
       height: 100vh !important; width: 100vw !important;
       position: fixed !important; inset: 0 !important;
     }
+    .lo-pin-x, .lo-pin-upload { display: none !important; }
     #print-branding { display: flex !important; }
   }
 
@@ -741,67 +759,7 @@
   }
   .key-input:focus { border-color: var(--gold); }
 
-  /* SECTOR ACCORDION */
-  .sector-item {
-    border-bottom: 1px solid rgba(186,140,54,0.08);
-  }
-  .sector-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
-    cursor: pointer;
-    transition: background 0.15s;
-    user-select: none;
-  }
-  .sector-header:hover { background: rgba(186,140,54,0.06); }
-  .sector-arrow {
-    font-size: 8px;
-    color: var(--text-muted);
-    transition: transform 0.2s;
-    flex-shrink: 0;
-    width: 10px;
-  }
-  .sector-item.open .sector-arrow { transform: rotate(90deg); }
-  .sector-icon { font-size: 14px; flex-shrink: 0; }
-  .sector-name {
-    flex: 1;
-    font-size: 11px;
-    color: var(--text-light);
-    font-weight: 400;
-  }
-  .sector-count {
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    color: var(--text-muted);
-    flex-shrink: 0;
-  }
-  .sector-find-tag {
-    font-family: 'DM Mono', monospace;
-    font-size: 7px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--green);
-    background: var(--gold);
-    padding: 1px 5px;
-    border-radius: 2px;
-    flex-shrink: 0;
-  }
-  .sector-content {
-    display: none;
-    padding: 0 10px 10px 32px;
-  }
-  .sector-item.open .sector-content { display: block; }
-  .sub-cat-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 8px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin: 8px 0 5px;
-    padding-bottom: 3px;
-    border-bottom: 1px solid rgba(186,140,54,0.08);
-  }
+  /* (sector accordion removed — replaced by cat-grid) */
 
   /* MANUAL ADD */
   .manual-add-section {
@@ -925,8 +883,8 @@
     <div class="sidebar-section">
       <div class="section-label">Map Type</div>
       <div class="map-type-row">
-        <button class="map-type-btn active" id="mt-satellite" onclick="setMapType('satellite')">Satellite</button>
-        <button class="map-type-btn" id="mt-hybrid" onclick="setMapType('hybrid')">Hybrid</button>
+        <button class="map-type-btn" id="mt-satellite" onclick="setMapType('satellite')">Satellite</button>
+        <button class="map-type-btn active" id="mt-hybrid" onclick="setMapType('hybrid')">Hybrid</button>
         <button class="map-type-btn" id="mt-roadmap" onclick="setMapType('roadmap')">Road</button>
       </div>
     </div>
@@ -1004,23 +962,32 @@
       </div>
     </div>
 
-    <!-- BRAND LOGOS -->
-    <div style="padding: 10px 14px 6px; flex-shrink:0;">
-      <div class="section-label" style="margin-bottom:6px;">Retailers — Click to Place</div>
-      <input type="text" class="brand-search" id="brandSearch" placeholder="Search all brands…" oninput="filterBrands(this.value)" />
+    <!-- NEARBY RETAILERS -->
+    <div class="sidebar-section" style="flex-shrink:0;">
+      <div class="section-label">Nearby Retailers</div>
+      <div class="cat-grid" id="catGrid"></div>
     </div>
-    <div class="brands-scroll" id="brandsScroll">
-      <!-- Sector accordion populated by JS -->
-    </div>
-    <!-- MANUAL ADD -->
-    <div class="manual-add-section">
-      <div class="section-label">Add Custom Brand</div>
+
+    <!-- FIND SPECIFIC BRAND -->
+    <div class="sidebar-section" style="flex-shrink:0;">
+      <div class="section-label">Find Specific Brand</div>
       <div class="manual-add-row">
-        <input type="text" class="manual-add-input name-input" id="customBrandName" placeholder="Brand name" />
+        <input type="text" class="manual-add-input name-input" id="brandSearchInput" placeholder="e.g. Starbucks" onkeydown="if(event.key==='Enter')findBrand()" />
+        <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" onclick="findBrand()">Find</button>
+      </div>
+    </div>
+
+    <!-- CUSTOM MARKER -->
+    <div class="sidebar-section" style="flex-shrink:0;">
+      <div class="section-label">Custom Marker</div>
+      <div class="manual-add-row">
+        <input type="text" class="manual-add-input name-input" id="customBrandName" placeholder="Label" />
         <input type="text" class="manual-add-input domain-input" id="customBrandDomain" placeholder="domain.com" />
         <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" onclick="addCustomBrand()">+ Add</button>
       </div>
     </div>
+
+    <input type="file" id="logoUploadInput" accept="image/*" style="display:none;" />
   </div>
 
   <!-- MAP -->
@@ -1064,25 +1031,25 @@
 <div class="export-panel" id="exportPanel">
   <h3>Export Map</h3>
   <div class="export-options">
-    <div class="export-opt" onclick="exportA4()">
+    <div class="export-opt" onclick="exportPrint('A3')">
       <span class="export-opt-icon">📄</span>
       <div class="export-opt-info">
-        <div class="export-opt-title">PDF</div>
-        <div class="export-opt-desc">Branded A4 landscape · Save as PDF from print dialog</div>
+        <div class="export-opt-title">PDF — A3 Landscape</div>
+        <div class="export-opt-desc">Large aerial print · 16.5 x 11.7 in · Save as PDF</div>
+      </div>
+    </div>
+    <div class="export-opt" onclick="exportPrint('A4')">
+      <span class="export-opt-icon">📄</span>
+      <div class="export-opt-info">
+        <div class="export-opt-title">PDF — A4 Landscape</div>
+        <div class="export-opt-desc">Standard print · 11.7 x 8.3 in · Save as PDF</div>
       </div>
     </div>
     <div class="export-opt" onclick="exportImage('png')">
       <span class="export-opt-icon">🖼️</span>
       <div class="export-opt-info">
-        <div class="export-opt-title">PNG</div>
-        <div class="export-opt-desc">High-res map image · opens in new tab to save</div>
-      </div>
-    </div>
-    <div class="export-opt" onclick="exportImage('jpg')">
-      <span class="export-opt-icon">📷</span>
-      <div class="export-opt-info">
-        <div class="export-opt-title">JPEG</div>
-        <div class="export-opt-desc">Compressed image for emails & sharing</div>
+        <div class="export-opt-title">PNG — High-Res</div>
+        <div class="export-opt-desc">1280 x 1280 aerial image · opens in new tab</div>
       </div>
     </div>
     <div class="export-opt" onclick="copyShareLink()">
@@ -1608,6 +1575,22 @@ const SECTOR_SEARCH = {
   "Telecom": "wireless phone carrier store",
 };
 
+const CATEGORIES = [
+  { id: "Power Center Anchor", label: "Big Box" },
+  { id: "Grocery Anchor", label: "Grocery" },
+  { id: "Junior Anchor", label: "Jr. Anchor" },
+  { id: "Specialty Box", label: "Specialty" },
+  { id: "Dollar / Value", label: "Dollar" },
+  { id: "QSR", label: "QSR" },
+  { id: "Fast Casual", label: "Fast Casual" },
+  { id: "Casual Dining", label: "Dining" },
+  { id: "Coffee / Café", label: "Coffee" },
+  { id: "Auto", label: "Auto" },
+  { id: "Health & Wellness", label: "Health" },
+  { id: "Banking / Finance", label: "Banking" },
+  { id: "Telecom", label: "Telecom" },
+];
+
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let map, trafficLayer;
 let subjectLocation = null;
@@ -1616,6 +1599,8 @@ let placedMarkers = [], highlightShapes = [];
 let radiiCircles = {};
 let logoCount = 0;
 let brandLookup = null;
+let categoryMarkers = {}; // { catId: [overlay, ...] }
+let _activeUploadOverlay = null; // for logo upload targeting
 let _LogoOverlay = null; // defined inside initMap after Google Maps loads
 // Custom polygon draw state
 let drawMode = false, drawPoints = [], drawPolyline = null, drawCursorLine = null;
@@ -1670,10 +1655,12 @@ function lookupBrand(placeName) {
 const GMAPS_API_KEY = 'AIzaSyADpereQzvBuQoubmpzQOVVIndA7OweDaA';
 
 window.addEventListener('DOMContentLoaded', () => {
-  populateSectors(SECTORS);
+  populateCategories();
   brandLookup = buildBrandLookup();
   document.getElementById('keyScreen').style.display = 'none';
   loadGoogleMaps(GMAPS_API_KEY);
+  // Wire up logo upload file input
+  document.getElementById('logoUploadInput').addEventListener('change', handleLogoUpload);
 });
 
 // ─── MAP INIT ─────────────────────────────────────────────────────────────────
@@ -1683,62 +1670,68 @@ function initMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat: 41.455, lng: -81.917 }, // Westlake, OH
     zoom: 17,
-    mapTypeId: 'satellite',
+    mapTypeId: 'hybrid',
     tilt: 0,
     disableDefaultUI: true,
     gestureHandling: 'greedy'
   });
 
-  // ─── HTML Logo Overlay (OverlayView with real Clearbit logos + leader line) ──
+  // ─── Circular Logo Pin Overlay ──────────────────────────────────────────────
   _LogoOverlay = class extends google.maps.OverlayView {
-    constructor(pos, name, domain, icon) {
+    constructor(pos, name, domain) {
       super();
-      this._anchorPos = pos; // fixed pin location, never changes
-      this._pos = pos;       // draggable label position
-      this._name = name; this._domain = domain; this._icon = icon;
+      this._anchorPos = pos;
+      this._pos = pos;
+      this._name = name;
+      this._domain = domain;
+      this._logoKey = domain || name.toLowerCase().replace(/[^a-z0-9]/g,'');
     }
     onAdd() {
       const el = document.createElement('div');
       el.style.cssText = 'position:absolute;';
       const sn = this._name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      el.innerHTML = `<div class="lo-wrap">
-        ${this._domain
-          ? `<img src="https://logo.dev/${this._domain}?token=pk_anonymous" width="20" height="20" class="lo-img" onerror="this.style.display='none'">`
-          : `<span style="font-size:15px;line-height:1;">${this._icon}</span>`}
-        <span class="lo-name">${sn}</span>
-        <span class="lo-x">×</span>
-      </div>`;
-      const wrap = el.querySelector('.lo-wrap');
-      const xBtn = el.querySelector('.lo-x');
-      wrap.addEventListener('mouseenter', () => xBtn.style.display='flex');
-      wrap.addEventListener('mouseleave', () => xBtn.style.display='none');
-      xBtn.addEventListener('click', e => { e.stopPropagation(); this.setMap(null); });
+      const initial = this._name.charAt(0).toUpperCase();
+      const hue = Math.abs(this._name.split('').reduce((h,c)=>h+c.charCodeAt(0),0)) % 360;
 
-      // Leader line from anchor pin to dragged label
+      // Check for uploaded logo first
+      const uploaded = getUploadedLogo(this._logoKey);
+
+      el.innerHTML = `<div class="lo-pin">
+        ${uploaded
+          ? `<img src="${uploaded}" class="lo-pin-img">`
+          : this._domain
+            ? `<img src="https://logo.dev/${this._domain}?token=pk_anonymous&size=64" class="lo-pin-img"
+                onerror="this.onerror=function(){this.parentNode.querySelector('.lo-pin-initial').style.display='flex';this.style.display='none';};this.src='https://www.google.com/s2/favicons?sz=64&domain=${this._domain}';">`
+            : `<span class="lo-pin-initial" style="background:hsl(${hue},55%,45%);">${initial}</span>`
+        }
+        ${this._domain && !uploaded ? `<span class="lo-pin-initial" style="background:hsl(${hue},55%,45%);display:none;">${initial}</span>` : ''}
+        <span class="lo-pin-tooltip">${sn}</span>
+        <span class="lo-pin-x">×</span>
+        <span class="lo-pin-upload">↑</span>
+      </div>`;
+
+      const pin = el.querySelector('.lo-pin');
+      const xBtn = el.querySelector('.lo-pin-x');
+      const uploadBtn = el.querySelector('.lo-pin-upload');
+
+      xBtn.addEventListener('click', e => { e.stopPropagation(); this.setMap(null); });
+      uploadBtn.addEventListener('click', e => { e.stopPropagation(); triggerLogoUpload(this._logoKey, this); });
+
+      // Leader line + anchor dot
       this._line = new google.maps.Polyline({
         path: [this._anchorPos, this._anchorPos],
-        strokeColor: '#555',
-        strokeWeight: 1.5,
-        strokeOpacity: 0.65,
-        map: null
+        strokeColor: '#555', strokeWeight: 1.5, strokeOpacity: 0.65, map: null
       });
-      // Anchor dot at the original pin location
       this._dot = new google.maps.Marker({
         position: this._anchorPos,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 4,
-          fillColor: '#555',
-          fillOpacity: 0.85,
-          strokeColor: '#fff',
-          strokeWeight: 1.5
-        },
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: '#555', fillOpacity: 0.85, strokeColor: '#fff', strokeWeight: 1.5 },
         map: null
       });
 
+      // Drag logic
       let dragging=false, sx, sy, sp;
-      wrap.addEventListener('mousedown', e => {
-        if (e.target===xBtn) return;
+      pin.addEventListener('mousedown', e => {
+        if (e.target===xBtn || e.target===uploadBtn) return;
         dragging=true; sx=e.clientX; sy=e.clientY; sp=this._pos;
         e.preventDefault(); e.stopPropagation();
       });
@@ -1759,8 +1752,6 @@ function initMap() {
       const proj = this.getProjection();
       const pt = proj.fromLatLngToDivPixel(this._pos);
       if (pt && this._el) { this._el.style.left=pt.x+'px'; this._el.style.top=pt.y+'px'; }
-
-      // Show leader line when bubble has been dragged far enough from anchor
       const anchorPt = proj.fromLatLngToDivPixel(this._anchorPos);
       if (pt && anchorPt && this._line && this._dot) {
         const dx = pt.x - anchorPt.x, dy = pt.y - anchorPt.y;
@@ -1774,6 +1765,22 @@ function initMap() {
           this._dot.setMap(null);
         }
       }
+    }
+    updateLogo(dataUrl) {
+      if (!this._el) return;
+      const img = this._el.querySelector('.lo-pin-img');
+      const initial = this._el.querySelector('.lo-pin-initial');
+      if (img) { img.src = dataUrl; img.style.display = ''; img.onerror = null; }
+      else {
+        // Replace initial with img
+        const newImg = document.createElement('img');
+        newImg.className = 'lo-pin-img';
+        newImg.src = dataUrl;
+        const pin = this._el.querySelector('.lo-pin');
+        if (initial) { pin.replaceChild(newImg, initial); }
+        else { pin.insertBefore(newImg, pin.firstChild); }
+      }
+      if (initial) initial.style.display = 'none';
     }
     onRemove() {
       if (this._el) { this._el.parentNode && this._el.parentNode.removeChild(this._el); this._el=null; }
@@ -1860,6 +1867,23 @@ function setMapType(type) {
   map.setMapTypeId(type);
   document.querySelectorAll('.map-type-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('mt-' + type).classList.add('active');
+
+  // Sync toggle states when user explicitly picks satellite (no labels possible)
+  if (type === 'satellite') {
+    layersState.roads = false;
+    layersState.businesses = false;
+    document.getElementById('tog-roads').classList.remove('on');
+    document.getElementById('tog-businesses').classList.remove('on');
+  } else if (type === 'hybrid') {
+    // Switching to hybrid — turn labels back on
+    layersState.roads = true;
+    layersState.businesses = true;
+    document.getElementById('tog-roads').classList.add('on');
+    document.getElementById('tog-businesses').classList.add('on');
+    map.setOptions({ styles: [] });
+  }
+  // For roadmap, reapply current toggle states
+  if (type === 'roadmap') applyLabelVisibility();
 }
 
 // ─── ZOOM ─────────────────────────────────────────────────────────────────────
@@ -1871,16 +1895,6 @@ function setZoom(val) {
 }
 
 // ─── LAYER TOGGLES ────────────────────────────────────────────────────────────
-const layerStyles = {
-  roads_off: [
-    // Hide all road name labels, including interstates and highways
-    { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] }
-  ],
-  businesses_off: [
-    { featureType: 'poi', stylers: [{ visibility: 'off' }] }
-  ]
-};
-
 let layersState = { roads: true, businesses: true, traffic: true };
 
 function toggleLayer(layer) {
@@ -1894,11 +1908,47 @@ function toggleLayer(layer) {
     return;
   }
 
-  // Apply combined styles
-  const styles = [];
-  if (!layersState.roads) styles.push(...layerStyles.roads_off);
-  if (!layersState.businesses) styles.push(...layerStyles.businesses_off);
-  map.setOptions({ styles });
+  applyLabelVisibility();
+}
+
+function applyLabelVisibility() {
+  if (!map) return;
+  const currentType = map.getMapTypeId();
+  const isAerial = (currentType === 'satellite' || currentType === 'hybrid');
+
+  if (isAerial) {
+    // Google Maps styles only work on roadmap tiles. In aerial view,
+    // we toggle between satellite (no labels) and hybrid (labels overlay)
+    // and apply styles to the hybrid overlay for independent control.
+    const wantAnyLabels = layersState.roads || layersState.businesses;
+    map.setMapTypeId(wantAnyLabels ? 'hybrid' : 'satellite');
+
+    // Update the map-type buttons to reflect actual state
+    document.querySelectorAll('.map-type-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(wantAnyLabels ? 'mt-hybrid' : 'mt-satellite').classList.add('active');
+
+    if (wantAnyLabels) {
+      // Build styles to hide whichever labels should be off
+      const styles = [];
+      if (!layersState.roads) {
+        styles.push({ featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] });
+      }
+      if (!layersState.businesses) {
+        styles.push({ featureType: 'poi', stylers: [{ visibility: 'off' }] });
+      }
+      map.setOptions({ styles });
+    }
+  } else {
+    // Roadmap mode — styles work directly
+    const styles = [];
+    if (!layersState.roads) {
+      styles.push({ featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] });
+    }
+    if (!layersState.businesses) {
+      styles.push({ featureType: 'poi', stylers: [{ visibility: 'off' }] });
+    }
+    map.setOptions({ styles });
+  }
 }
 
 // ─── RADII ────────────────────────────────────────────────────────────────────
@@ -1966,6 +2016,7 @@ function startDrawing() {
       drawCursorLine = new google.maps.Polyline({
         path: [from, e.latLng],
         map,
+        clickable: false,
         strokeColor: currentHighlightColor,
         strokeWeight: 1.5,
         strokeOpacity: 0.5
@@ -1973,56 +2024,63 @@ function startDrawing() {
     }
   });
 
-  // Each click adds a vertex + dot marker (with delay to distinguish from dblclick)
-  let drawClickTimeout = null;
+  // Each click adds a vertex immediately; dblclick removes the extra point and finishes
   drawClickListener = map.addListener('click', (e) => {
     if (!drawMode) return;
-    // Delay to check if this is actually a double-click
-    if (drawClickTimeout) clearTimeout(drawClickTimeout);
-    drawClickTimeout = setTimeout(() => {
-      drawPoints.push(e.latLng);
-
-      // Vertex dot
-      const dot = new google.maps.Marker({
-        position: e.latLng, map,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 5,
-          fillColor: currentHighlightColor,
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 1.5
-        },
-        zIndex: 30
-      });
-      drawVertexMarkers.push(dot);
-
-      // Outline polyline: close shape when 3+ points
-      const path = drawPoints.length >= 3
-        ? [...drawPoints, drawPoints[0]]
-        : [...drawPoints];
-      if (drawPolyline) {
-        drawPolyline.setPath(path);
-        drawPolyline.setOptions({ strokeColor: currentHighlightColor });
-      } else {
-        drawPolyline = new google.maps.Polyline({
-          path, map,
-          strokeColor: currentHighlightColor,
-          strokeWeight: 2,
-          strokeOpacity: 1
-        });
-      }
-    }, 250);
+    addDrawVertex(e.latLng);
   });
 
-  // Double-click → finish
-  drawDblClickListener = map.addListener('dblclick', () => {
-    if (drawClickTimeout) { clearTimeout(drawClickTimeout); drawClickTimeout = null; }
+  // Double-click → remove the extra vertex from the first click of the dblclick, then finish
+  drawDblClickListener = map.addListener('dblclick', (e) => {
+    if (!drawMode) return;
+    // Google Maps fires click before dblclick, so remove the point the click just added
+    if (drawPoints.length > 0) {
+      drawPoints.pop();
+      const m = drawVertexMarkers.pop();
+      if (m) m.setMap(null);
+    }
     if (drawPoints.length < 3) { cancelDrawing(); return; }
     finishDrawing();
   });
 
   document.addEventListener('keydown', escCancelDraw);
+}
+
+function addDrawVertex(latLng) {
+  drawPoints.push(latLng);
+
+  // Vertex dot (non-clickable so it doesn't intercept map clicks)
+  const dot = new google.maps.Marker({
+    position: latLng, map,
+    clickable: false,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 5,
+      fillColor: currentHighlightColor,
+      fillOpacity: 1,
+      strokeColor: '#fff',
+      strokeWeight: 1.5
+    },
+    zIndex: 30
+  });
+  drawVertexMarkers.push(dot);
+
+  // Outline polyline: close shape when 3+ points
+  const path = drawPoints.length >= 3
+    ? [...drawPoints, drawPoints[0]]
+    : [...drawPoints];
+  if (drawPolyline) {
+    drawPolyline.setPath(path);
+    drawPolyline.setOptions({ strokeColor: currentHighlightColor });
+  } else {
+    drawPolyline = new google.maps.Polyline({
+      path, map,
+      clickable: false,
+      strokeColor: currentHighlightColor,
+      strokeWeight: 2,
+      strokeOpacity: 1
+    });
+  }
 }
 
 function escCancelDraw(e) {
@@ -2089,59 +2147,51 @@ function clearAll() {
   setStatus('Everything cleared');
 }
 
-// ─── BRAND LOGOS ─────────────────────────────────────────────────────────────
-function populateSectors(data) {
-  const container = document.getElementById('brandsScroll');
-  let html = '';
-  for (const [sectorName, sector] of Object.entries(data)) {
-    const totalBrands = Object.values(sector.sub).reduce((n, arr) => n + arr.length, 0);
-    const sectorKey = sectorName.replace(/[^a-z0-9]/gi, '_');
-    const multiSub = Object.keys(sector.sub).length > 1;
-    const hasAutoSearch = !!SECTOR_SEARCH[sectorName];
-    html += `<div class="sector-item" data-sector-key="${sectorKey}" data-sector-name="${sectorName}">
-      <div class="sector-header" onclick="toggleSectorAndFind(this.closest('.sector-item'))">
-        <span class="sector-arrow">▶</span>
-        <span class="sector-icon">${sector.icon}</span>
-        <span class="sector-name">${sectorName}</span>
-        ${hasAutoSearch ? `<span class="sector-find-tag">Find</span>` : ''}
-        <span class="sector-count">${totalBrands}</span>
-      </div>
-      <div class="sector-content">`;
-    for (const [subName, brands] of Object.entries(sector.sub)) {
-      if (multiSub) html += `<div class="sub-cat-label">${subName}</div>`;
-      html += `<div class="brand-grid">`;
-      brands.forEach(b => {
-        html += `<div class="brand-chip" onclick="placeBrand(this.dataset.brandName,this.dataset.brandIcon,this.dataset.domain)" data-name="${b.name.toLowerCase()}" data-brand-name="${b.name}" data-brand-icon="${b.icon}" data-domain="${b.domain}">
-          <span class="brand-chip-icon">${b.icon}</span>
-          <span class="brand-chip-name">${b.name}</span>
-        </div>`;
+// ─── CATEGORY GRID ──────────────────────────────────────────────────────────
+function populateCategories() {
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn';
+    btn.dataset.catId = cat.id;
+    btn.innerHTML = `${cat.label} <span class="cat-count"></span>`;
+    btn.addEventListener('click', () => toggleCategory(cat.id));
+    grid.appendChild(btn);
+  });
+}
+
+function toggleCategory(catId) {
+  const btn = document.querySelector(`.cat-btn[data-cat-id="${catId}"]`);
+  if (!btn || !map) return;
+
+  // Second click — remove pins for this category
+  if (btn.classList.contains('active')) {
+    btn.classList.remove('active');
+    btn.querySelector('.cat-count').textContent = '';
+    if (categoryMarkers[catId]) {
+      categoryMarkers[catId].forEach(ov => {
+        ov.setMap(null);
+        placedMarkers = placedMarkers.filter(m => m !== ov);
       });
-      html += `</div>`;
+      logoCount = Math.max(0, logoCount - categoryMarkers[catId].length);
+      document.getElementById('logoCount').textContent = logoCount;
+      delete categoryMarkers[catId];
     }
-    html += `</div></div>`;
+    setStatus(`${catId} cleared`);
+    return;
   }
-  container.innerHTML = html;
-  loadCustomBrands();
-}
 
-function toggleSectorAndFind(item) {
-  const wasOpen = item.classList.contains('open');
-  item.classList.toggle('open');
-  // Auto-populate when opening a sector that has a query mapping
-  if (!wasOpen && map) {
-    const sectorName = item.dataset.sectorName;
-    if (SECTOR_SEARCH[sectorName]) {
-      findNearbySector(sectorName);
-    }
-  }
-}
-
-function findNearbySector(sectorName) {
-  const query = SECTOR_SEARCH[sectorName];
-  if (!query || !map) return;
+  // First click — search and place pins
+  const query = SECTOR_SEARCH[catId];
+  if (!query) return;
   const bounds = map.getBounds();
-  if (!bounds) { setStatus('Zoom to a location first, then expand a sector'); return; }
-  setStatus(`Searching for ${sectorName} in this area…`);
+  if (!bounds) { setStatus('Zoom to a location first'); return; }
+
+  btn.classList.add('active');
+  setStatus(`Searching for ${catId}…`);
+  categoryMarkers[catId] = [];
+
   const service = new google.maps.places.PlacesService(map);
   let foundCount = 0;
 
@@ -2150,43 +2200,44 @@ function findNearbySector(sectorName) {
       results.forEach(r => {
         if (!r.geometry) return;
         const matched = lookupBrand(r.name);
-        dropLogoMarker(r.geometry.location, r.name, matched ? matched.icon : '📍', matched ? matched.domain : '');
+        const ov = _dropLogoPin(r.geometry.location, r.name, matched ? matched.domain : '');
+        if (ov) categoryMarkers[catId].push(ov);
         foundCount++;
       });
     }
     if (pagination && pagination.hasNextPage) {
-      setTimeout(() => pagination.nextPage(), 500); // throttle to respect rate limits
+      setTimeout(() => pagination.nextPage(), 500);
     } else {
+      btn.querySelector('.cat-count').textContent = foundCount || '';
       setStatus(foundCount > 0
-        ? `${foundCount} ${sectorName} location(s) found — drag labels, click × to remove`
-        : `No ${sectorName} found in current view`);
+        ? `${foundCount} ${catId} location(s) found`
+        : `No ${catId} found in current view`);
     }
   }
 
   service.textSearch({ query, bounds }, handlePage);
 }
 
-function filterBrands(query) {
-  const q = query.toLowerCase().trim();
-  const container = document.getElementById('brandsScroll');
-  if (!q) {
-    container.querySelectorAll('.brand-chip').forEach(c => c.style.display = '');
-    container.querySelectorAll('.sector-content').forEach(c => c.style.removeProperty('display'));
-    container.querySelectorAll('.sub-cat-label').forEach(c => c.style.display = '');
-    return;
-  }
-  container.querySelectorAll('.brand-chip').forEach(chip => {
-    chip.style.display = chip.dataset.name.includes(q) ? '' : 'none';
-  });
-  container.querySelectorAll('.sector-item').forEach(item => {
-    const hasMatch = [...item.querySelectorAll('.brand-chip')].some(c => c.style.display !== 'none');
-    item.querySelector('.sector-content').style.display = hasMatch ? 'block' : 'none';
-  });
-  container.querySelectorAll('.sub-cat-label').forEach(label => {
-    const grid = label.nextElementSibling;
-    if (grid && grid.classList.contains('brand-grid')) {
-      const hasVisible = [...grid.querySelectorAll('.brand-chip')].some(c => c.style.display !== 'none');
-      label.style.display = hasVisible ? '' : 'none';
+function findBrand() {
+  const input = document.getElementById('brandSearchInput');
+  const query = input.value.trim();
+  if (!query || !map) return;
+  setStatus(`Searching for ${query}…`);
+  const matched = lookupBrand(query);
+  const domain = matched ? matched.domain : '';
+  const service = new google.maps.places.PlacesService(map);
+  service.textSearch({ query, bounds: map.getBounds() }, (results, status) => {
+    if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+      const toPlace = results.slice(0, 8);
+      toPlace.forEach(place => {
+        if (place.geometry && place.geometry.location) {
+          _dropLogoPin(place.geometry.location, place.name, domain);
+        }
+      });
+      setStatus(`${toPlace.length} ${query} location(s) placed`);
+    } else {
+      _dropLogoPin(map.getCenter(), query, domain);
+      setStatus(`${query} placed at map center — drag to reposition`);
     }
   });
 }
@@ -2197,69 +2248,63 @@ function addCustomBrand() {
   const name = nameEl.value.trim();
   if (!name) { nameEl.focus(); return; }
   const domain = domainEl.value.trim().replace(/^https?:\/\//,'');
-  const brand = { name, domain, icon: '📌' };
-  const customs = JSON.parse(localStorage.getItem('reat_custom_brands') || '[]');
-  customs.push(brand);
-  localStorage.setItem('reat_custom_brands', JSON.stringify(customs));
-  appendCustomBrandChip(brand);
+  if (!map) return;
+  _dropLogoPin(map.getCenter(), name, domain);
+  setStatus(`"${name}" placed at map center — drag to reposition`);
   nameEl.value = '';
   domainEl.value = '';
-  setStatus(`"${name}" added to Custom`);
-  const customItem = document.querySelector('.sector-item[data-sector-key="Custom"]');
-  if (customItem && !customItem.classList.contains('open')) customItem.classList.add('open');
 }
 
-function appendCustomBrandChip(brand) {
-  const customItem = document.querySelector('.sector-item[data-sector-key="Custom"]');
-  if (!customItem) return;
-  const grids = customItem.querySelectorAll('.brand-grid');
-  const grid = grids[grids.length - 1];
-  if (!grid) return;
-  const chip = document.createElement('div');
-  chip.className = 'brand-chip';
-  chip.setAttribute('onclick', 'placeBrand(this.dataset.brandName,this.dataset.brandIcon,this.dataset.domain)');
-  chip.dataset.name = brand.name.toLowerCase();
-  chip.dataset.brandName = brand.name;
-  chip.dataset.brandIcon = brand.icon;
-  chip.dataset.domain = brand.domain || '';
-  chip.innerHTML = `<span class="brand-chip-icon">${brand.icon}</span><span class="brand-chip-name">${brand.name}</span>`;
-  grid.appendChild(chip);
-}
-
-function loadCustomBrands() {
-  const customs = JSON.parse(localStorage.getItem('reat_custom_brands') || '[]');
-  customs.forEach(b => appendCustomBrandChip(b));
-}
-
-function placeBrand(name, icon, domain) {
-  if (!map) return;
-  if (drawMode) cancelDrawing();
-  setStatus(`Searching for ${name} nearby…`);
-  const d = domain || (lookupBrand(name) || {}).domain || '';
-  const service = new google.maps.places.PlacesService(map);
-  service.textSearch({ query: name, bounds: map.getBounds() }, (results, status) => {
-    if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
-      const toPlace = results.slice(0, 8);
-      toPlace.forEach(place => {
-        if (place.geometry && place.geometry.location) {
-          dropLogoMarker(place.geometry.location, place.name, icon, d);
-        }
-      });
-      setStatus(`${toPlace.length} ${name} location(s) placed — click any to remove`);
-    } else {
-      dropLogoMarker(map.getCenter(), name, icon, d);
-      setStatus(`${name} placed at map center — drag to reposition`);
-    }
-  });
-}
-
-function dropLogoMarker(latLng, name, icon, domain) {
-  if (!_LogoOverlay) return;
-  const overlay = new _LogoOverlay(latLng, name, domain || '', icon || '📍');
+function _dropLogoPin(latLng, name, domain) {
+  if (!_LogoOverlay) return null;
+  const overlay = new _LogoOverlay(latLng, name, domain || '');
   overlay.setMap(map);
   placedMarkers.push(overlay);
   logoCount++;
   document.getElementById('logoCount').textContent = logoCount;
+  return overlay;
+}
+
+// ─── LOGO UPLOAD ────────────────────────────────────────────────────────────
+function getUploadedLogo(key) {
+  try {
+    const logos = JSON.parse(localStorage.getItem('reat_logos') || '{}');
+    return logos[key] || null;
+  } catch { return null; }
+}
+
+function triggerLogoUpload(key, overlay) {
+  _activeUploadOverlay = overlay;
+  const input = document.getElementById('logoUploadInput');
+  input.dataset.logoKey = key;
+  input.click();
+}
+
+function handleLogoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const key = e.target.dataset.logoKey;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = reader.result;
+    // Save to localStorage
+    try {
+      const logos = JSON.parse(localStorage.getItem('reat_logos') || '{}');
+      logos[key] = dataUrl;
+      localStorage.setItem('reat_logos', JSON.stringify(logos));
+    } catch (err) {
+      setStatus('Logo too large to save — try a smaller image');
+      return;
+    }
+    // Update the overlay that triggered the upload
+    if (_activeUploadOverlay && _activeUploadOverlay._el) {
+      _activeUploadOverlay.updateLogo(dataUrl);
+    }
+    setStatus('Logo uploaded and saved');
+    _activeUploadOverlay = null;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = ''; // reset so same file can be re-selected
 }
 
 function clearMarkers() {
@@ -2267,6 +2312,12 @@ function clearMarkers() {
   placedMarkers = [];
   logoCount = 0;
   document.getElementById('logoCount').textContent = 0;
+  // Reset category toggles
+  categoryMarkers = {};
+  document.querySelectorAll('.cat-btn.active').forEach(btn => {
+    btn.classList.remove('active');
+    btn.querySelector('.cat-count').textContent = '';
+  });
   setStatus('All logos cleared');
 }
 
@@ -2302,9 +2353,18 @@ function hideExport() {
   document.getElementById('exportBackdrop').style.display = 'none';
 }
 
-function exportA4() {
+function exportPrint(size) {
   if (!map) return;
   hideExport();
+  // Dynamically set @page size
+  let printStyle = document.getElementById('_printSize');
+  if (!printStyle) {
+    printStyle = document.createElement('style');
+    printStyle.id = '_printSize';
+    document.head.appendChild(printStyle);
+  }
+  printStyle.textContent = `@media print { @page { size: ${size} landscape; margin: 0; } }`;
+
   // Stamp the branding strip with current property + date
   const address = document.getElementById('propertyBadge').textContent;
   const dateStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
@@ -2312,19 +2372,19 @@ function exportA4() {
   document.getElementById('pb-date').textContent = dateStr;
   // Small delay so panel closes before print dialog opens
   setTimeout(() => window.print(), 150);
-  setStatus('Print dialog opened — set orientation to Landscape, then Save as PDF.');
+  setStatus(`Print dialog opened — ${size} Landscape · Save as PDF.`);
 }
 
 function exportImage(format) {
   if (!map) return;
   hideExport();
-  // Build Static Maps URL for standalone image download
+  // Build Static Maps URL — max resolution: 640x640 * scale=2 = 1280x1280
   const center = map.getCenter(), zoom = map.getZoom();
   const type = map.getMapTypeId(), key = GMAPS_API_KEY;
   const p = [
     `center=${center.lat()},${center.lng()}`,
     `zoom=${zoom}`,
-    `size=640x360`,
+    `size=640x640`,
     `scale=2`,
     `maptype=${type}`,
     `key=${key}`
@@ -2345,7 +2405,7 @@ function exportImage(format) {
       : `markers=color:white|size:small|${ll}`);
   });
   window.open(`https://maps.googleapis.com/maps/api/staticmap?${p.join('&')}`, '_blank');
-  setStatus(`${format.toUpperCase()} opened in new tab — right-click to save.`);
+  setStatus(`${format.toUpperCase()} opened in new tab (1280×1280) — right-click to save.`);
 }
 
 function copyShareLink() {
