@@ -433,6 +433,22 @@
   }
   .map-container.place-mode .place-indicator { display: block; }
 
+  /* SAVED MAPS */
+  .saved-maps-list { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
+  .saved-map-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 8px; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(186,140,54,0.1); border-radius: 6px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .saved-map-item:hover { background: rgba(186,140,54,0.12); }
+  .saved-map-name { flex: 1; font-size: 11px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .saved-map-date { font-size: 9px; color: var(--text-muted); font-family: 'DM Mono', monospace; white-space: nowrap; }
+  .saved-map-del { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 0 2px; opacity: 0; transition: opacity 0.15s; }
+  .saved-map-item:hover .saved-map-del { opacity: 1; }
+  .saved-map-del:hover { color: #ff4444; }
+  .save-row { display: flex; gap: 4px; margin-bottom: 6px; }
+
   /* MAP CONTAINER */
   .map-container {
     flex: 1;
@@ -860,6 +876,7 @@
   #app-content { display: none; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script
   async
   crossorigin="anonymous"
@@ -926,6 +943,20 @@
 
     <!-- SCROLLABLE AREA -->
     <div class="sidebar-scroll">
+
+      <!-- SAVED MAPS -->
+      <div class="sidebar-section">
+        <div class="section-label collapsible" onclick="toggleSection(this)">Saved Maps</div>
+        <div class="section-body">
+          <div class="save-row">
+            <input type="text" class="manual-add-input name-input" id="saveMapName" placeholder="Map name…" onkeydown="if(event.key==='Enter')saveMap()" />
+            <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" onclick="saveMap()">Save</button>
+          </div>
+          <div class="saved-maps-list" id="savedMapsList">
+            <span style="font-size:10px;color:var(--text-muted);">No saved maps</span>
+          </div>
+        </div>
+      </div>
 
       <!-- MAP TYPE -->
       <div class="sidebar-section collapsed">
@@ -2402,9 +2433,12 @@ function clearAll() {
   clearMarkers();
   clearHighlights();
   // Clear radii
-  Object.values(radiiCircles).forEach(c => c.setMap(null));
+  Object.keys(radiiCircles).forEach(miles => {
+    radiiCircles[miles].setMap(null);
+    const el = document.getElementById('tog-r' + miles);
+    if (el) el.classList.remove('on');
+  });
   radiiCircles = {};
-  document.querySelectorAll('.radius-toggle').forEach(t => t.classList.remove('active'));
   setStatus('Everything cleared');
 }
 
@@ -2807,6 +2841,194 @@ function toggleSection(label) {
 function setStatus(msg) {
   document.getElementById('statusText').textContent = msg;
 }
+
+// ─── SUPABASE — SAVED MAPS ──────────────────────────────────────────────────
+const _supa = window.supabase.createClient(
+  'https://ftyjeyyeurzkkxhllthu.supabase.co',
+  'sb_publishable_bDfnQVi86mVdsYM1xSwQ3Q_T2Ig-b3j'
+);
+
+function _getUserId() {
+  return window.Clerk && window.Clerk.user ? window.Clerk.user.id : 'anonymous';
+}
+
+// Serialize current map state into a plain object
+function _captureMapState() {
+  const state = {};
+  if (!map) return state;
+
+  // View
+  const c = map.getCenter();
+  state.center = { lat: c.lat(), lng: c.lng() };
+  state.zoom = map.getZoom();
+  state.heading = map.getHeading() || 0;
+  state.tilt = map.getTilt() || 0;
+  state.mapType = map.getMapTypeId();
+
+  // Property
+  state.address = document.getElementById('propertyBadge').textContent || '';
+  if (subjectLocation) {
+    state.subjectLocation = { lat: subjectLocation.lat(), lng: subjectLocation.lng() };
+  }
+
+  // Logo pins
+  state.logos = placedMarkers.map(ov => ({
+    anchor: { lat: ov._anchorPos.lat(), lng: ov._anchorPos.lng() },
+    pos: { lat: ov._pos.lat(), lng: ov._pos.lng() },
+    name: ov._name,
+    domain: ov._domain,
+  }));
+
+  // Highlight polygons
+  state.highlights = highlightShapes.map(poly => ({
+    paths: poly.getPath().getArray().map(p => ({ lat: p.lat(), lng: p.lng() })),
+    fillColor: poly.get('fillColor'),
+    fillOpacity: poly.get('fillOpacity'),
+    strokeColor: poly.get('strokeColor'),
+  }));
+
+  // Active radii
+  state.radii = Object.keys(radiiCircles).map(Number);
+
+  return state;
+}
+
+// Restore map state from a saved object
+function _restoreMapState(state) {
+  if (!map || !state) return;
+
+  // Clear existing
+  clearAll();
+
+  // View
+  if (state.center) map.setCenter(state.center);
+  if (state.zoom) map.setZoom(state.zoom);
+  if (state.heading) map.setHeading(state.heading);
+  if (state.tilt) map.setTilt(state.tilt);
+  if (state.mapType) {
+    map.setMapTypeId(state.mapType);
+    document.querySelectorAll('.map-type-btn').forEach(b => b.classList.remove('active'));
+    const mtBtn = document.getElementById('mt-' + state.mapType);
+    if (mtBtn) mtBtn.classList.add('active');
+  }
+
+  // Property
+  if (state.address) document.getElementById('propertyBadge').textContent = state.address;
+  if (state.subjectLocation) {
+    subjectLocation = new google.maps.LatLng(state.subjectLocation.lat, state.subjectLocation.lng);
+    new google.maps.Marker({
+      position: subjectLocation, map,
+      title: 'Subject Property',
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#FFD700', fillOpacity: 1, strokeColor: '#1a2e1a', strokeWeight: 2 },
+      zIndex: 20
+    });
+  }
+
+  // Logo pins
+  if (state.logos && state.logos.length) {
+    state.logos.forEach(l => {
+      const ov = _dropLogoPin(new google.maps.LatLng(l.anchor.lat, l.anchor.lng), l.name, l.domain);
+      if (ov && (l.pos.lat !== l.anchor.lat || l.pos.lng !== l.anchor.lng)) {
+        ov._pos = new google.maps.LatLng(l.pos.lat, l.pos.lng);
+        ov.draw();
+      }
+    });
+  }
+
+  // Highlights
+  if (state.highlights && state.highlights.length) {
+    state.highlights.forEach(h => {
+      const polygon = new google.maps.Polygon({
+        paths: h.paths, fillColor: h.fillColor, fillOpacity: h.fillOpacity || 0.35,
+        strokeColor: h.strokeColor, strokeWeight: 2, editable: true, map
+      });
+      highlightShapes.push(polygon);
+    });
+  }
+
+  // Radii
+  if (state.radii && state.radii.length) {
+    state.radii.forEach(miles => toggleRadius(miles));
+  }
+}
+
+async function saveMap() {
+  const nameEl = document.getElementById('saveMapName');
+  const name = nameEl.value.trim();
+  if (!name) { nameEl.focus(); return; }
+
+  setStatus('Saving map…');
+  const state = _captureMapState();
+  const userId = _getUserId();
+
+  const { error } = await _supa.from('saved_maps').insert({
+    user_id: userId,
+    name: name,
+    map_state: state,
+  });
+
+  if (error) {
+    console.error('Save error:', error);
+    setStatus('Save failed — ' + error.message);
+    return;
+  }
+
+  nameEl.value = '';
+  setStatus(`Map "${name}" saved`);
+  loadSavedMapsList();
+}
+
+async function loadSavedMapsList() {
+  const userId = _getUserId();
+  const { data, error } = await _supa
+    .from('saved_maps')
+    .select('id, name, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  const list = document.getElementById('savedMapsList');
+  if (error || !data || data.length === 0) {
+    list.innerHTML = '<span style="font-size:10px;color:var(--text-muted);">No saved maps</span>';
+    return;
+  }
+
+  list.innerHTML = data.map(m => {
+    const d = new Date(m.created_at);
+    const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+    return `<div class="saved-map-item" onclick="loadMap('${m.id}')">
+      <span class="saved-map-name">${m.name.replace(/</g,'&lt;')}</span>
+      <span class="saved-map-date">${dateStr}</span>
+      <button class="saved-map-del" onclick="event.stopPropagation();deleteMap('${m.id}','${m.name.replace(/'/g,"\\'")}')" title="Delete">×</button>
+    </div>`;
+  }).join('');
+}
+
+async function loadMap(id) {
+  setStatus('Loading map…');
+  const { data, error } = await _supa
+    .from('saved_maps')
+    .select('name, map_state')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) {
+    setStatus('Failed to load map');
+    return;
+  }
+
+  _restoreMapState(data.map_state);
+  setStatus(`Loaded "${data.name}"`);
+}
+
+async function deleteMap(id, name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  const { error } = await _supa.from('saved_maps').delete().eq('id', id);
+  if (error) { setStatus('Delete failed'); return; }
+  setStatus(`"${name}" deleted`);
+  loadSavedMapsList();
+}
+
+
 </script>
 
 <!-- Google Maps loaded dynamically after key entry -->
@@ -2834,6 +3056,8 @@ function setStatus(msg) {
         // Signed in — show the app
         document.getElementById('clerk-login-screen').style.display = 'none';
         document.getElementById('app-content').style.display = 'block';
+        // Load saved maps list
+        if (typeof loadSavedMapsList === 'function') loadSavedMapsList();
       } else {
         // Not signed in — redirect to Clerk's hosted sign-in
         window.Clerk.redirectToSignIn();
