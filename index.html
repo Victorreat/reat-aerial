@@ -2970,11 +2970,17 @@ function _captureMapState() {
       const aLng = typeof ov._anchorPos.lng === 'function' ? ov._anchorPos.lng() : ov._anchorPos.lng;
       const pLat = typeof ov._pos.lat === 'function' ? ov._pos.lat() : ov._pos.lat;
       const pLng = typeof ov._pos.lng === 'function' ? ov._pos.lng() : ov._pos.lng;
+      // Fill in missing domain via brand lookup before saving
+      let domain = ov._domain || '';
+      if (!domain) {
+        const matched = lookupBrand(ov._name);
+        if (matched) domain = matched.domain;
+      }
       state.logos.push({
         anchor: { lat: aLat, lng: aLng },
         pos: { lat: pLat, lng: pLng },
         name: ov._name,
-        domain: ov._domain || '',
+        domain: domain,
       });
     } catch (e) { /* skip broken overlay */ }
   });
@@ -3040,13 +3046,19 @@ function _restoreMapState(state) {
     });
   }
 
-  // Logo pins — restore in batches to avoid UI freeze with many logos
+  // Logo pins — restore with brand lookup to fill missing domains
   if (state.logos && state.logos.length) {
     setStatus(`Restoring ${state.logos.length} logos…`);
     state.logos.forEach(l => {
       try {
         const anchorLatLng = new google.maps.LatLng(l.anchor.lat, l.anchor.lng);
-        const ov = _dropLogoPin(anchorLatLng, l.name, l.domain || '');
+        // Try to match domain if it was empty at save time
+        let domain = l.domain || '';
+        if (!domain) {
+          const matched = lookupBrand(l.name);
+          if (matched) domain = matched.domain;
+        }
+        const ov = _dropLogoPin(anchorLatLng, l.name, domain);
         if (ov) {
           const dx = Math.abs(l.pos.lat - l.anchor.lat);
           const dy = Math.abs(l.pos.lng - l.anchor.lng);
