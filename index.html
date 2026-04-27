@@ -2917,24 +2917,50 @@ function _captureMapState() {
     state.subjectLocation = { lat: subjectLocation.lat(), lng: subjectLocation.lng() };
   }
 
-  // Logo pins
-  state.logos = placedMarkers.map(ov => ({
-    anchor: { lat: ov._anchorPos.lat(), lng: ov._anchorPos.lng() },
-    pos: { lat: ov._pos.lat(), lng: ov._pos.lng() },
-    name: ov._name,
-    domain: ov._domain,
-  }));
+  // Logo pins — only save ones still on the map
+  state.logos = [];
+  placedMarkers.forEach(ov => {
+    try {
+      if (!ov.getMap()) return; // skip removed overlays
+      const aLat = typeof ov._anchorPos.lat === 'function' ? ov._anchorPos.lat() : ov._anchorPos.lat;
+      const aLng = typeof ov._anchorPos.lng === 'function' ? ov._anchorPos.lng() : ov._anchorPos.lng;
+      const pLat = typeof ov._pos.lat === 'function' ? ov._pos.lat() : ov._pos.lat;
+      const pLng = typeof ov._pos.lng === 'function' ? ov._pos.lng() : ov._pos.lng;
+      state.logos.push({
+        anchor: { lat: aLat, lng: aLng },
+        pos: { lat: pLat, lng: pLng },
+        name: ov._name,
+        domain: ov._domain || '',
+      });
+    } catch (e) { /* skip broken overlay */ }
+  });
 
   // Highlight polygons
-  state.highlights = highlightShapes.map(poly => ({
-    paths: poly.getPath().getArray().map(p => ({ lat: p.lat(), lng: p.lng() })),
-    fillColor: poly.get('fillColor'),
-    fillOpacity: poly.get('fillOpacity'),
-    strokeColor: poly.get('strokeColor'),
-  }));
+  state.highlights = [];
+  highlightShapes.forEach(poly => {
+    try {
+      if (!poly.getMap()) return;
+      const path = poly.getPath();
+      if (!path || path.getLength() === 0) return;
+      const pts = [];
+      path.forEach(p => pts.push({ lat: p.lat(), lng: p.lng() }));
+      state.highlights.push({
+        paths: pts,
+        fillColor: poly.fillColor || poly.get('fillColor') || '#FFD700',
+        fillOpacity: poly.fillOpacity != null ? poly.fillOpacity : (poly.get('fillOpacity') || 0.35),
+        strokeColor: poly.strokeColor || poly.get('strokeColor') || '#FFD700',
+      });
+    } catch (e) { /* skip broken polygon */ }
+  });
 
   // Active radii
   state.radii = Object.keys(radiiCircles).map(Number);
+
+  // Active categories (so we can show which buttons were toggled)
+  state.activeCategories = [];
+  document.querySelectorAll('.cat-btn.active').forEach(btn => {
+    state.activeCategories.push(btn.dataset.catId);
+  });
 
   return state;
 }
@@ -2970,31 +2996,59 @@ function _restoreMapState(state) {
     });
   }
 
-  // Logo pins
+  // Logo pins — restore in batches to avoid UI freeze with many logos
   if (state.logos && state.logos.length) {
+    setStatus(`Restoring ${state.logos.length} logos…`);
     state.logos.forEach(l => {
-      const ov = _dropLogoPin(new google.maps.LatLng(l.anchor.lat, l.anchor.lng), l.name, l.domain);
-      if (ov && (l.pos.lat !== l.anchor.lat || l.pos.lng !== l.anchor.lng)) {
-        ov._pos = new google.maps.LatLng(l.pos.lat, l.pos.lng);
-        ov.draw();
-      }
+      try {
+        const anchorLatLng = new google.maps.LatLng(l.anchor.lat, l.anchor.lng);
+        const ov = _dropLogoPin(anchorLatLng, l.name, l.domain || '');
+        if (ov) {
+          const dx = Math.abs(l.pos.lat - l.anchor.lat);
+          const dy = Math.abs(l.pos.lng - l.anchor.lng);
+          if (dx > 0.000001 || dy > 0.000001) {
+            ov._pos = new google.maps.LatLng(l.pos.lat, l.pos.lng);
+            ov.draw();
+          }
+        }
+      } catch (e) { /* skip broken entry */ }
     });
   }
 
   // Highlights
   if (state.highlights && state.highlights.length) {
     state.highlights.forEach(h => {
-      const polygon = new google.maps.Polygon({
-        paths: h.paths, fillColor: h.fillColor, fillOpacity: h.fillOpacity || 0.35,
-        strokeColor: h.strokeColor, strokeWeight: 2, editable: true, map
-      });
-      highlightShapes.push(polygon);
+      try {
+        const polygon = new google.maps.Polygon({
+          paths: h.paths,
+          fillColor: h.fillColor || '#FFD700',
+          fillOpacity: h.fillOpacity != null ? h.fillOpacity : 0.35,
+          strokeColor: h.strokeColor || '#FFD700',
+          strokeWeight: 2,
+          editable: false,
+          map
+        });
+        polygon.addListener('click', (e) => {
+          if (e.domEvent) e.domEvent.stopPropagation();
+          highlightShapes.forEach(p => p.setEditable(false));
+          polygon.setEditable(true);
+        });
+        highlightShapes.push(polygon);
+      } catch (e) { /* skip broken highlight */ }
     });
   }
 
   // Radii
   if (state.radii && state.radii.length) {
     state.radii.forEach(miles => toggleRadius(miles));
+  }
+
+  // Restore active category button states (visual only, pins already restored above)
+  if (state.activeCategories && state.activeCategories.length) {
+    state.activeCategories.forEach(catId => {
+      const btn = document.querySelector(`.cat-btn[data-cat-id="${catId}"]`);
+      if (btn) btn.classList.add('active');
+    });
   }
 }
 
