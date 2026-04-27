@@ -2741,32 +2741,60 @@ function exportPrint(size) {
 
 // ─── SCREEN CAPTURE EXPORT ──────────────────────────────────────────────────
 // Captures EXACTLY what's on screen — map, logos, highlights, radii — landscape
+// Convert an <img> src to a data URL via canvas
+function _imgToDataUrl(img) {
+  return new Promise(resolve => {
+    if (!img.src || img.src.startsWith('data:')) { resolve(); return; }
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth || 64;
+    c.height = img.naturalHeight || 64;
+    const cx = c.getContext('2d');
+    const tmp = new Image();
+    tmp.crossOrigin = 'anonymous';
+    tmp.onload = () => {
+      cx.drawImage(tmp, 0, 0, c.width, c.height);
+      try { img._origSrc = img.src; img.src = c.toDataURL('image/png'); } catch {}
+      resolve();
+    };
+    tmp.onerror = () => resolve(); // skip if can't load
+    tmp.src = img.src;
+  });
+}
+
 async function exportImage(format) {
   if (!map) return;
   hideExport();
-  setStatus('Capturing your map — please wait…');
+  setStatus('Preparing logos for export…');
 
   const mapContainer = document.querySelector('.map-container');
 
   // Temporarily hide UI controls that shouldn't appear in export
-  const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator');
+  const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator, .place-indicator');
   hideEls.forEach(el => el.style.display = 'none');
   // Hide pin hover buttons
-  document.querySelectorAll('.lo-pin-x, .lo-pin-upload').forEach(el => el.style.setProperty('display','none','important'));
+  document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip').forEach(el => el.style.setProperty('display','none','important'));
+
+  // Convert all logo images to inline data URLs so html2canvas can render them
+  const logoImgs = mapContainer.querySelectorAll('.lo-pin-img');
+  await Promise.all(Array.from(logoImgs).map(_imgToDataUrl));
+
+  setStatus('Capturing your map — please wait…');
 
   try {
     const canvas = await html2canvas(mapContainer, {
       useCORS: true,
-      allowTaint: true,
+      allowTaint: false,
       scale: 2,
       logging: false,
       backgroundColor: '#1a2e1a',
-      imageTimeout: 5000,
+      imageTimeout: 15000,
     });
 
     // Restore hidden UI
     hideEls.forEach(el => el.style.display = '');
-    document.querySelectorAll('.lo-pin-x, .lo-pin-upload').forEach(el => el.style.removeProperty('display'));
+    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip').forEach(el => el.style.removeProperty('display'));
+    // Restore original image sources
+    logoImgs.forEach(img => { if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; } });
 
     // Add REAT branding strip at the bottom
     const W = canvas.width, H = canvas.height;
@@ -2832,7 +2860,8 @@ async function exportImage(format) {
   } catch (err) {
     // Restore hidden UI on error
     hideEls.forEach(el => el.style.display = '');
-    document.querySelectorAll('.lo-pin-x, .lo-pin-upload').forEach(el => el.style.removeProperty('display'));
+    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip').forEach(el => el.style.removeProperty('display'));
+    logoImgs.forEach(img => { if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; } });
     console.error('Export error:', err);
     setStatus('Export failed — use PDF print instead');
   }
