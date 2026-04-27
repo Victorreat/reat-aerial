@@ -2112,6 +2112,11 @@ function initMap() {
       e.latLng.lat().toFixed(5) + ', ' + e.latLng.lng().toFixed(5);
   });
 
+  // Click map to deselect any editable highlight polygons
+  map.addListener('click', () => {
+    highlightShapes.forEach(p => p.setEditable(false));
+  });
+
   setStatus('Map ready — search a property address to begin');
 }
 
@@ -2412,11 +2417,17 @@ function finishDrawing() {
     fillOpacity: currentOpacity,
     strokeColor: currentHighlightColor,
     strokeWeight: 2,
-    editable: true,
+    editable: false,
     map
   });
+  // Click polygon to toggle edit mode (show/hide vertex handles)
+  polygon.addListener('click', (e) => {
+    if (e.domEvent) e.domEvent.stopPropagation();
+    highlightShapes.forEach(p => p.setEditable(false));
+    polygon.setEditable(true);
+  });
   highlightShapes.push(polygon);
-  setStatus('Highlight added — drag vertices to adjust. Draw again or place logos.');
+  setStatus('Highlight added — click it to edit vertices.');
 }
 
 function undoLastHighlight() {
