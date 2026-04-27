@@ -2741,24 +2741,31 @@ function exportPrint(size) {
 
 // ─── SCREEN CAPTURE EXPORT ──────────────────────────────────────────────────
 // Captures EXACTLY what's on screen — map, logos, highlights, radii — landscape
-// Convert an <img> src to a data URL via canvas
-function _imgToDataUrl(img) {
-  return new Promise(resolve => {
-    if (!img.src || img.src.startsWith('data:')) { resolve(); return; }
-    const c = document.createElement('canvas');
-    c.width = img.naturalWidth || 64;
-    c.height = img.naturalHeight || 64;
-    const cx = c.getContext('2d');
-    const tmp = new Image();
-    tmp.crossOrigin = 'anonymous';
-    tmp.onload = () => {
-      cx.drawImage(tmp, 0, 0, c.width, c.height);
-      try { img._origSrc = img.src; img.src = c.toDataURL('image/png'); } catch {}
-      resolve();
-    };
-    tmp.onerror = () => resolve(); // skip if can't load
-    tmp.src = img.src;
-  });
+// Convert an <img> src to an inline data URL via fetch, so html2canvas can render it
+async function _imgToDataUrl(img) {
+  if (!img.src || img.src.startsWith('data:')) return;
+  try {
+    const resp = await fetch(img.src, { mode: 'cors' });
+    if (!resp.ok) throw new Error('fetch failed');
+    const blob = await resp.blob();
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    img._origSrc = img.src;
+    img.src = dataUrl;
+  } catch {
+    // CORS blocked or fetch failed — show initial letter fallback for export
+    const pin = img.closest('.lo-pin');
+    if (pin) {
+      const initial = pin.querySelector('.lo-pin-initial');
+      if (initial) { initial.style.setProperty('display','flex','important'); }
+      img._wasHidden = true;
+      img.style.setProperty('display','none','important');
+    }
+  }
 }
 
 async function exportImage(format) {
@@ -2793,8 +2800,16 @@ async function exportImage(format) {
     // Restore hidden UI
     hideEls.forEach(el => el.style.display = '');
     document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip').forEach(el => el.style.removeProperty('display'));
-    // Restore original image sources
-    logoImgs.forEach(img => { if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; } });
+    // Restore original image sources and undo fallback swaps
+    logoImgs.forEach(img => {
+      if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
+      if (img._wasHidden) {
+        img.style.removeProperty('display');
+        const init = img.closest('.lo-pin')?.querySelector('.lo-pin-initial');
+        if (init) init.style.removeProperty('display');
+        delete img._wasHidden;
+      }
+    });
 
     // Add REAT branding strip at the bottom
     const W = canvas.width, H = canvas.height;
@@ -2861,7 +2876,15 @@ async function exportImage(format) {
     // Restore hidden UI on error
     hideEls.forEach(el => el.style.display = '');
     document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip').forEach(el => el.style.removeProperty('display'));
-    logoImgs.forEach(img => { if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; } });
+    logoImgs.forEach(img => {
+      if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
+      if (img._wasHidden) {
+        img.style.removeProperty('display');
+        const init = img.closest('.lo-pin')?.querySelector('.lo-pin-initial');
+        if (init) init.style.removeProperty('display');
+        delete img._wasHidden;
+      }
+    });
     console.error('Export error:', err);
     setStatus('Export failed — use PDF print instead');
   }
