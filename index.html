@@ -2741,30 +2741,51 @@ function exportPrint(size) {
 
 // ─── SCREEN CAPTURE EXPORT ──────────────────────────────────────────────────
 // Captures EXACTLY what's on screen — map, logos, highlights, radii — landscape
-// Convert an <img> src to an inline data URL via fetch, so html2canvas can render it
+// Convert a blob to a data URL
+function _blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Convert an <img> src to an inline data URL so html2canvas can render it
 async function _imgToDataUrl(img) {
   if (!img.src || img.src.startsWith('data:')) return;
+  const origSrc = img.src;
+
+  // 1. Try direct fetch with CORS
   try {
-    const resp = await fetch(img.src, { mode: 'cors' });
-    if (!resp.ok) throw new Error('fetch failed');
-    const blob = await resp.blob();
-    const dataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-    img._origSrc = img.src;
-    img.src = dataUrl;
-  } catch {
-    // CORS blocked or fetch failed — show initial letter fallback for export
-    const pin = img.closest('.lo-pin');
-    if (pin) {
-      const initial = pin.querySelector('.lo-pin-initial');
-      if (initial) { initial.style.setProperty('display','flex','important'); }
-      img._wasHidden = true;
-      img.style.setProperty('display','none','important');
+    const resp = await fetch(origSrc, { mode: 'cors' });
+    if (resp.ok) {
+      const dataUrl = await _blobToDataUrl(await resp.blob());
+      img._origSrc = origSrc;
+      img.src = dataUrl;
+      return;
     }
+  } catch {}
+
+  // 2. Try via CORS image proxy (handles logo.dev, Google favicons, etc.)
+  try {
+    const proxyUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(origSrc) + '&w=64&h=64&fit=contain';
+    const resp = await fetch(proxyUrl, { mode: 'cors' });
+    if (resp.ok) {
+      const dataUrl = await _blobToDataUrl(await resp.blob());
+      img._origSrc = origSrc;
+      img.src = dataUrl;
+      return;
+    }
+  } catch {}
+
+  // 3. Last resort — show initial letter fallback
+  const pin = img.closest('.lo-pin');
+  if (pin) {
+    const initial = pin.querySelector('.lo-pin-initial');
+    if (initial) initial.style.setProperty('display','flex','important');
+    img._wasHidden = true;
+    img.style.setProperty('display','none','important');
   }
 }
 
