@@ -428,7 +428,7 @@
   .place-indicator {
     position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
     background: rgba(186,140,54,0.92); color: #fff; font-size: 11px;
-    padding: 5px 14px; border-radius: 6px; z-index: 10; pointer-events: none;
+    padding: 5px 14px; border-radius: 6px; z-index: 10;
     font-family: 'Inter', sans-serif; display: none;
   }
   .map-container.place-mode .place-indicator { display: block; }
@@ -1092,7 +1092,7 @@
   <div class="map-container">
     <div id="map"></div>
     <div class="draw-indicator" id="drawIndicator">Draw Mode — Click to add as many points as needed — Double-click to finish — ESC to cancel</div>
-    <div class="place-indicator" id="placeIndicator">Click on the map to place logo — ESC to cancel</div>
+    <div class="place-indicator" id="placeIndicator">Click on the map to place logo — <a href="#" onclick="event.preventDefault();exitPlaceMode()" style="color:#fff;text-decoration:underline;cursor:pointer;font-weight:600;">Cancel</a></div>
 
     <!-- MAP CONTROLS -->
     <div class="map-controls">
@@ -2573,7 +2573,9 @@ function togglePlaceMode() {
   if (!name) { nameEl.focus(); setStatus('Enter a label first'); return; }
   if (!map) return;
   _placeMode = true;
-  document.getElementById('placeLogoBtn').classList.add('active');
+  const plBtn = document.getElementById('placeLogoBtn');
+  plBtn.classList.add('active');
+  plBtn.textContent = '✕ Cancel Place Mode';
   document.querySelector('.map-container').classList.add('place-mode');
   setStatus('Click on the map to place "' + name + '" — ESC to cancel');
   _placeModeListener = map.addListener('click', (e) => {
@@ -2595,7 +2597,9 @@ function _placeModeEsc(e) {
 
 function exitPlaceMode() {
   _placeMode = false;
-  document.getElementById('placeLogoBtn').classList.remove('active');
+  const plBtn = document.getElementById('placeLogoBtn');
+  plBtn.classList.remove('active');
+  plBtn.textContent = '📍 Click Map to Place';
   document.querySelector('.map-container').classList.remove('place-mode');
   if (_placeModeListener) { google.maps.event.removeListener(_placeModeListener); _placeModeListener = null; }
   document.removeEventListener('keydown', _placeModeEsc);
