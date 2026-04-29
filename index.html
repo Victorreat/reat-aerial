@@ -1146,18 +1146,25 @@
         <div class="export-opt-desc">Standard aerial print with logos + highlights · Save as PDF</div>
       </div>
     </div>
-    <div class="export-opt" onclick="exportImage('png')">
+    <div class="export-opt" onclick="exportImage('png','A3')">
       <span class="export-opt-icon">🖼️</span>
       <div class="export-opt-info">
-        <div class="export-opt-title">PNG — High-Res Image</div>
-        <div class="export-opt-desc">Aerial with logos, highlights, branding · direct download</div>
+        <div class="export-opt-title">PNG — A3 Landscape</div>
+        <div class="export-opt-desc">High-res aerial with logos + branding · 3307×2339px</div>
       </div>
     </div>
-    <div class="export-opt" onclick="exportImage('jpg')">
+    <div class="export-opt" onclick="exportImage('png','A4')">
+      <span class="export-opt-icon">🖼️</span>
+      <div class="export-opt-info">
+        <div class="export-opt-title">PNG — A4 Landscape</div>
+        <div class="export-opt-desc">Standard aerial with logos + branding · 2339×1654px</div>
+      </div>
+    </div>
+    <div class="export-opt" onclick="exportImage('jpg','A3')">
       <span class="export-opt-icon">📷</span>
       <div class="export-opt-info">
-        <div class="export-opt-title">JPEG — Compressed Image</div>
-        <div class="export-opt-desc">Smaller file for emails and sharing · direct download</div>
+        <div class="export-opt-title">JPEG — A3 Landscape</div>
+        <div class="export-opt-desc">Compressed for emails and sharing · A3 landscape</div>
       </div>
     </div>
     <div class="export-opt" onclick="copyShareLink()">
@@ -2789,7 +2796,10 @@ async function _imgToDataUrl(img) {
   }
 }
 
-async function exportImage(format) {
+// A3 landscape 200dpi = 3307×2339, A4 landscape 200dpi = 2339×1654
+const EXPORT_SIZES = { A3: { w: 3307, h: 2339 }, A4: { w: 2339, h: 1654 } };
+
+async function exportImage(format, size) {
   if (!map) return;
   hideExport();
   setStatus('Preparing logos for export…');
@@ -2832,65 +2842,81 @@ async function exportImage(format) {
       }
     });
 
-    // Add REAT branding strip at the bottom
-    const W = canvas.width, H = canvas.height;
+    // Target dimensions — A3 landscape by default
+    const dims = EXPORT_SIZES[size] || EXPORT_SIZES.A3;
+    const TW = dims.w, TH = dims.h;
+    const SH = 60; // branding strip height
+
     const finalCanvas = document.createElement('canvas');
-    const SH = 48; // branding strip height
-    finalCanvas.width = W;
-    finalCanvas.height = H + SH;
+    finalCanvas.width = TW;
+    finalCanvas.height = TH;
     const ctx = finalCanvas.getContext('2d');
 
-    // Draw captured map
-    ctx.drawImage(canvas, 0, 0);
+    // Fill background
+    ctx.fillStyle = '#1a2e1a';
+    ctx.fillRect(0, 0, TW, TH);
 
-    // Branding strip
+    // Scale captured map to fill landscape canvas (cover, center-crop)
+    const mapH = TH - SH; // available height above branding strip
+    const srcW = canvas.width, srcH = canvas.height;
+    const scaleX = TW / srcW, scaleY = mapH / srcH;
+    const sc = Math.max(scaleX, scaleY); // cover
+    const drawW = srcW * sc, drawH = srcH * sc;
+    const ox = (TW - drawW) / 2, oy = (mapH - drawH) / 2;
+    ctx.drawImage(canvas, ox, oy, drawW, drawH);
+
+    // Branding strip at bottom
     ctx.fillStyle = 'rgba(26,46,26,0.95)';
-    ctx.fillRect(0, H, W, SH);
+    ctx.fillRect(0, TH - SH, TW, SH);
     ctx.fillStyle = '#cba040';
-    ctx.fillRect(0, H, W, 3);
+    ctx.fillRect(0, TH - SH, TW, 3);
 
-    const ty = H + SH / 2;
+    const ty = TH - SH / 2;
     ctx.textBaseline = 'middle';
 
+    // Scale text sizes relative to output width
+    const fs = Math.round(TW / 140); // ~24px on A3
+
     // REAT logo
-    ctx.font = 'bold 20px serif';
+    ctx.font = `bold ${fs * 1.2}px serif`;
     ctx.fillStyle = '#cba040';
     ctx.textAlign = 'left';
-    ctx.fillText('REAT', 20, ty);
-    ctx.font = '10px monospace';
+    ctx.fillText('REAT', 30, ty);
+    ctx.font = `${fs * 0.5}px monospace`;
     ctx.fillStyle = '#9aab8a';
-    ctx.fillText('COMMERCIAL REAL ESTATE', 80, ty);
+    ctx.fillText('COMMERCIAL REAL ESTATE', 30 + fs * 3.5, ty);
 
     // Property address
     const addr = document.getElementById('propertyBadge').textContent;
-    ctx.font = '500 14px sans-serif';
+    ctx.font = `500 ${fs * 0.7}px sans-serif`;
     ctx.fillStyle = '#f0ead8';
     ctx.textAlign = 'center';
-    ctx.fillText(addr, W / 2, ty);
+    ctx.fillText(addr, TW / 2, ty);
 
     // Date + URL
     ctx.textAlign = 'right';
-    ctx.font = '10px monospace';
+    ctx.font = `${fs * 0.5}px monospace`;
     ctx.fillStyle = '#9aab8a';
-    ctx.fillText(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), W - 200, ty);
+    ctx.fillText(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), TW - 280, ty);
     ctx.fillStyle = '#cba040';
-    ctx.fillText('reatcommercial.com', W - 20, ty);
+    ctx.fillText('reatcommercial.com', TW - 30, ty);
 
     // Download
     const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
     const ext = format === 'jpg' ? 'jpg' : 'png';
     const quality = format === 'jpg' ? 0.92 : undefined;
+    const sizeLabel = size || 'A3';
     const slug = addr.replace(/[^a-z0-9]/gi, '-').substring(0, 40) || 'export';
 
     finalCanvas.toBlob(blob => {
       if (!blob) { setStatus('Export failed — try PDF print instead'); return; }
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `REAT-Aerial-${slug}.${ext}`;
+      a.download = `REAT-${sizeLabel}-Aerial-${slug}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setStatus(`${ext.toUpperCase()} downloaded — ${finalCanvas.width}×${finalCanvas.height}px`);
+      setStatus(`${sizeLabel} ${ext.toUpperCase()} downloaded — ${finalCanvas.width}×${finalCanvas.height}px`);
     }, mime, quality);
 
   } catch (err) {
