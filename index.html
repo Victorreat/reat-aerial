@@ -673,8 +673,7 @@
   .lo-pin-img {
     width: 32px; height: 32px;
     border-radius: 50%;
-    object-fit: cover;
-    object-position: center;
+    object-fit: contain;
   }
   .lo-pin-initial {
     width: 32px; height: 32px;
@@ -2841,6 +2840,9 @@ async function exportImage(format, size) {
   const logoImgs = mapContainer.querySelectorAll('.lo-pin-img');
   await Promise.all(Array.from(logoImgs).map(_imgToDataUrl));
 
+  // Force clean rendering for export only
+  logoImgs.forEach(img => { img.style.objectFit = 'cover'; img.style.objectPosition = 'center'; });
+
   setStatus('Capturing landscape map — please wait…');
 
   try {
@@ -2866,6 +2868,8 @@ async function exportImage(format, size) {
     hideEls.forEach(el => el.style.display = '');
     document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip').forEach(el => el.style.removeProperty('display'));
     logoImgs.forEach(img => {
+      img.style.removeProperty('object-fit');
+      img.style.removeProperty('object-position');
       if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
       if (img._wasHidden) {
         img.style.removeProperty('display');
@@ -2949,6 +2953,8 @@ async function exportImage(format, size) {
     hideEls.forEach(el => el.style.display = '');
     document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip').forEach(el => el.style.removeProperty('display'));
     logoImgs.forEach(img => {
+      img.style.removeProperty('object-fit');
+      img.style.removeProperty('object-position');
       if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
       if (img._wasHidden) {
         img.style.removeProperty('display');
