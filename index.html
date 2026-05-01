@@ -735,6 +735,22 @@
     z-index: 11;
   }
   .lo-pin:hover .lo-pin-upload { display: flex; }
+  .lo-pin-resize {
+    position: absolute;
+    bottom: -4px; left: -4px;
+    width: 16px; height: 16px;
+    background: #3498db;
+    border-radius: 50%;
+    color: white;
+    font-size: 9px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: nwse-resize;
+    line-height: 1;
+    z-index: 11;
+  }
+  .lo-pin:hover .lo-pin-resize { display: flex; }
 
   /* Print branding strip — hidden in app, shown on print */
   #print-branding {
@@ -2000,11 +2016,13 @@ function initMap() {
         <span class="lo-pin-tooltip">${sn}</span>
         <span class="lo-pin-x">×</span>
         <span class="lo-pin-upload">↑</span>
+        <span class="lo-pin-resize">⤡</span>
       </div>`;
 
       const pin = el.querySelector('.lo-pin');
       const xBtn = el.querySelector('.lo-pin-x');
       const uploadBtn = el.querySelector('.lo-pin-upload');
+      const resizeBtn = el.querySelector('.lo-pin-resize');
 
       xBtn.addEventListener('click', e => { e.stopPropagation(); this.setMap(null); });
       uploadBtn.addEventListener('click', e => { e.stopPropagation(); triggerLogoUpload(this._logoKey, this); });
@@ -2023,7 +2041,7 @@ function initMap() {
       // Drag logic
       let dragging=false, sx, sy, sp;
       pin.addEventListener('mousedown', e => {
-        if (e.target===xBtn || e.target===uploadBtn) return;
+        if (e.target===xBtn || e.target===uploadBtn || e.target===resizeBtn) return;
         dragging=true; sx=e.clientX; sy=e.clientY; sp=this._pos;
         e.preventDefault(); e.stopPropagation();
       });
@@ -2034,9 +2052,25 @@ function initMap() {
         this._pos = proj.fromDivPixelToLatLng(new google.maps.Point(pt.x+e.clientX-sx, pt.y+e.clientY-sy));
         this.draw();
       };
-      const onUp = () => { dragging=false; };
+      const onUp = () => { dragging=false; resizing=false; };
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
+
+      // Resize logic — drag bottom-left handle to scale pin
+      let resizing=false, rStartY, rStartScale;
+      resizeBtn.addEventListener('mousedown', e => {
+        e.preventDefault(); e.stopPropagation();
+        resizing=true;
+        rStartY = e.clientY;
+        rStartScale = this._customScale || 1;
+      });
+      document.addEventListener('mousemove', e => {
+        if (!resizing) return;
+        const dy = rStartY - e.clientY; // drag up = bigger
+        const newScale = Math.min(4, Math.max(0.3, rStartScale + dy / 80));
+        this._customScale = newScale;
+        this.draw();
+      });
       this._pin = pin;
       this._el = el;
       this.getPanes().overlayMouseTarget.appendChild(el);
@@ -2049,7 +2083,9 @@ function initMap() {
       // Scale pins based on zoom — shrink when zoomed out so aerial stays visible
       if (this._pin && this.getMap()) {
         const z = this.getMap().getZoom();
-        const s = Math.min(1, Math.max(0.35, (z - 13) / 5));
+        const zoomScale = Math.min(1, Math.max(0.35, (z - 13) / 5));
+        const cs = this._customScale || 1;
+        const s = zoomScale * cs;
         this._pin.style.transform = `translate(-50%,-50%) scale(${s})`;
       }
 
@@ -3038,6 +3074,7 @@ function _captureMapState() {
         pos: { lat: pLat, lng: pLng },
         name: ov._name,
         domain: domain,
+        customScale: ov._customScale || null,
       });
     } catch (e) { /* skip broken overlay */ }
   });
@@ -3117,12 +3154,13 @@ function _restoreMapState(state) {
         }
         const ov = _dropLogoPin(anchorLatLng, l.name, domain);
         if (ov) {
+          if (l.customScale) ov._customScale = l.customScale;
           const dx = Math.abs(l.pos.lat - l.anchor.lat);
           const dy = Math.abs(l.pos.lng - l.anchor.lng);
           if (dx > 0.000001 || dy > 0.000001) {
             ov._pos = new google.maps.LatLng(l.pos.lat, l.pos.lng);
-            ov.draw();
           }
+          ov.draw();
         }
       } catch (e) { /* skip broken entry */ }
     });
