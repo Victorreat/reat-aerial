@@ -2064,6 +2064,11 @@ function initMap() {
         rStartY = e.clientY;
         rStartScale = this._customScale || 1;
       });
+      resizeBtn.addEventListener('dblclick', e => {
+        e.preventDefault(); e.stopPropagation();
+        this._customScale = 1;
+        this.draw();
+      });
       document.addEventListener('mousemove', e => {
         if (!resizing) return;
         const dy = rStartY - e.clientY; // drag up = bigger
