@@ -751,6 +751,7 @@
     z-index: 11;
   }
   .lo-pin:hover .lo-pin-resize { display: flex; }
+  .lo-pin.lo-selected { outline: 3px solid #3498db; outline-offset: 2px; border-radius: 50%; }
 
   /* Print branding strip — hidden in app, shown on print */
   #print-branding {
@@ -2027,6 +2028,15 @@ function initMap() {
       xBtn.addEventListener('click', e => { e.stopPropagation(); this.setMap(null); });
       uploadBtn.addEventListener('click', e => { e.stopPropagation(); triggerLogoUpload(this._logoKey, this); });
 
+      // Shift+click to toggle selection for group resize
+      pin.addEventListener('click', e => {
+        if (e.shiftKey) {
+          e.stopPropagation();
+          this._selected = !this._selected;
+          pin.classList.toggle('lo-selected', this._selected);
+        }
+      });
+
       // Leader line + anchor dot
       this._line = new google.maps.Polyline({
         path: [this._anchorPos, this._anchorPos],
@@ -2056,29 +2066,37 @@ function initMap() {
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
 
-      // Resize logic — drag bottom-left handle to scale pin
-      let resizing=false, rStartY, rStartScale;
+      // Resize logic — drag bottom-left handle to scale pin (applies to all selected)
+      let resizing=false, rStartY, rStartScales;
       resizeBtn.addEventListener('mousedown', e => {
         e.preventDefault(); e.stopPropagation();
         resizing=true;
         rStartY = e.clientY;
-        rStartScale = this._customScale || 1;
+        // Capture starting scales for this pin and all selected pins
+        const targets = this._getResizeTargets();
+        rStartScales = targets.map(ov => ({ ov, scale: ov._customScale || 1 }));
       });
       resizeBtn.addEventListener('dblclick', e => {
         e.preventDefault(); e.stopPropagation();
-        this._customScale = 1;
-        this.draw();
+        const targets = this._getResizeTargets();
+        targets.forEach(ov => { ov._customScale = 1; ov.draw(); });
       });
       document.addEventListener('mousemove', e => {
         if (!resizing) return;
         const dy = rStartY - e.clientY; // drag up = bigger
-        const newScale = Math.min(4, Math.max(0.3, rStartScale + dy / 80));
-        this._customScale = newScale;
-        this.draw();
+        rStartScales.forEach(({ ov, scale }) => {
+          ov._customScale = Math.min(4, Math.max(0.3, scale + dy / 80));
+          ov.draw();
+        });
       });
       this._pin = pin;
       this._el = el;
       this.getPanes().overlayMouseTarget.appendChild(el);
+    }
+    _getResizeTargets() {
+      const selected = placedMarkers.filter(m => m._selected && m._pin);
+      // If this pin is selected, resize all selected; otherwise just this one
+      return (this._selected && selected.length > 1) ? selected : [this];
     }
     draw() {
       const proj = this.getProjection();
@@ -2163,6 +2181,11 @@ function initMap() {
   // Click map to deselect any editable highlight polygons
   map.addListener('click', () => {
     highlightShapes.forEach(p => p.setEditable(false));
+    // Deselect all logo pins
+    placedMarkers.forEach(m => { if (m._selected) { m._selected = false; if (m._pin) m._pin.classList.remove('lo-selected'); } });
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') placedMarkers.forEach(m => { if (m._selected) { m._selected = false; if (m._pin) m._pin.classList.remove('lo-selected'); } });
   });
 
   setStatus('Map ready — search a property address to begin');
