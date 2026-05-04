@@ -1017,6 +1017,10 @@
               <span class="toggle-label"><span class="toggle-icon">🚗</span> Traffic</span>
               <div class="toggle-switch"></div>
             </div>
+            <div class="toggle-item on" id="tog-site-marker" onclick="toggleSiteMarker()">
+              <span class="toggle-label"><span class="toggle-icon">📍</span> Site Marker</span>
+              <div class="toggle-switch"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1903,6 +1907,7 @@ const CATEGORIES = [
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let map, trafficLayer;
 let subjectLocation = null;
+let subjectMarker = null;
 let currentHighlightColor = '#FFD700', currentOpacity = 0.35;
 let placedMarkers = [], highlightShapes = [];
 let radiiCircles = {};
@@ -2212,7 +2217,8 @@ function _flyToPlace(location, label) {
   document.getElementById('propertyBadge').textContent = label;
   setStatus('Property loaded: ' + label);
   // Drop subject property marker
-  new google.maps.Marker({
+  if (subjectMarker) subjectMarker.setMap(null);
+  subjectMarker = new google.maps.Marker({
     position: location, map,
     title: 'Subject Property',
     icon: {
@@ -2225,6 +2231,7 @@ function _flyToPlace(location, label) {
     },
     zIndex: 20
   });
+  document.getElementById('tog-site-marker').classList.add('on');
   // Re-center any active radius circles
   Object.entries(radiiCircles).forEach(([miles, circle]) => {
     circle.setCenter(location);
@@ -2279,6 +2286,12 @@ function toggleLayer(layer) {
   }
 
   applyLabelVisibility();
+}
+
+function toggleSiteMarker() {
+  const el = document.getElementById('tog-site-marker');
+  const isOn = el.classList.toggle('on');
+  if (subjectMarker) subjectMarker.setVisible(isOn);
 }
 
 function applyLabelVisibility() {
@@ -3160,12 +3173,14 @@ function _restoreMapState(state) {
   if (state.address) document.getElementById('propertyBadge').textContent = state.address;
   if (state.subjectLocation) {
     subjectLocation = new google.maps.LatLng(state.subjectLocation.lat, state.subjectLocation.lng);
-    new google.maps.Marker({
+    if (subjectMarker) subjectMarker.setMap(null);
+    subjectMarker = new google.maps.Marker({
       position: subjectLocation, map,
       title: 'Subject Property',
       icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#FFD700', fillOpacity: 1, strokeColor: '#1a2e1a', strokeWeight: 2 },
       zIndex: 20
     });
+    document.getElementById('tog-site-marker').classList.add('on');
   }
 
   // Logo pins — restore with brand lookup to fill missing domains
