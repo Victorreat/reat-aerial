@@ -752,6 +752,33 @@
   }
   .lo-pin:hover .lo-pin-resize { display: flex; }
   .lo-pin.lo-selected { outline: 3px solid #3498db; outline-offset: 2px; border-radius: 50%; }
+  .lo-pin-nobg {
+    position: absolute;
+    bottom: -4px; right: 18px;
+    width: 16px; height: 16px;
+    background: #8e44ad;
+    border-radius: 50%;
+    color: white;
+    font-size: 8px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 11;
+  }
+  .lo-pin:hover .lo-pin-nobg { display: flex; }
+  .lo-pin.no-bg {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .lo-pin.no-bg .lo-pin-img {
+    border-radius: 0;
+    width: 40px; height: 40px;
+    object-fit: contain;
+  }
 
   /* Print branding strip — hidden in app, shown on print */
   #print-branding {
@@ -785,7 +812,7 @@
       height: 100vh !important; width: 100vw !important;
       position: fixed !important; inset: 0 !important;
     }
-    .lo-pin-x, .lo-pin-upload { display: none !important; }
+    .lo-pin-x, .lo-pin-upload, .lo-pin-nobg { display: none !important; }
     #print-branding { display: flex !important; }
   }
 
@@ -2023,15 +2050,18 @@ function initMap() {
         <span class="lo-pin-x">×</span>
         <span class="lo-pin-upload">↑</span>
         <span class="lo-pin-resize">⤡</span>
+        <span class="lo-pin-nobg" title="Toggle background">◐</span>
       </div>`;
 
       const pin = el.querySelector('.lo-pin');
       const xBtn = el.querySelector('.lo-pin-x');
       const uploadBtn = el.querySelector('.lo-pin-upload');
       const resizeBtn = el.querySelector('.lo-pin-resize');
+      const noBgBtn = el.querySelector('.lo-pin-nobg');
 
       xBtn.addEventListener('click', e => { e.stopPropagation(); this.setMap(null); });
       uploadBtn.addEventListener('click', e => { e.stopPropagation(); triggerLogoUpload(this._logoKey, this); });
+      noBgBtn.addEventListener('click', e => { e.stopPropagation(); this._noBg = !this._noBg; pin.classList.toggle('no-bg', this._noBg); });
 
       // Shift+click to toggle selection for group resize
       pin.addEventListener('click', e => {
@@ -2056,7 +2086,7 @@ function initMap() {
       // Drag logic
       let dragging=false, sx, sy, sp;
       pin.addEventListener('mousedown', e => {
-        if (e.target===xBtn || e.target===uploadBtn || e.target===resizeBtn) return;
+        if (e.target===xBtn || e.target===uploadBtn || e.target===resizeBtn || e.target===noBgBtn) return;
         dragging=true; sx=e.clientX; sy=e.clientY; sp=this._pos;
         e.preventDefault(); e.stopPropagation();
       });
@@ -2911,7 +2941,7 @@ async function exportImage(format, size) {
   // Temporarily hide UI controls that shouldn't appear in export
   const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator, .place-indicator');
   hideEls.forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip').forEach(el => el.style.setProperty('display','none','important'));
+  document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg').forEach(el => el.style.setProperty('display','none','important'));
 
   // Convert all logo images to inline data URLs so html2canvas can render them
   const logoImgs = mapContainer.querySelectorAll('.lo-pin-img');
@@ -2943,7 +2973,7 @@ async function exportImage(format, size) {
 
     // Restore hidden UI
     hideEls.forEach(el => el.style.display = '');
-    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip').forEach(el => el.style.removeProperty('display'));
+    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg').forEach(el => el.style.removeProperty('display'));
     logoImgs.forEach(img => {
       img.style.removeProperty('object-fit');
       img.style.removeProperty('object-position');
@@ -3028,7 +3058,7 @@ async function exportImage(format, size) {
     map.setCenter(map.getCenter());
     // Restore hidden UI on error
     hideEls.forEach(el => el.style.display = '');
-    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip').forEach(el => el.style.removeProperty('display'));
+    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg').forEach(el => el.style.removeProperty('display'));
     logoImgs.forEach(img => {
       img.style.removeProperty('object-fit');
       img.style.removeProperty('object-position');
@@ -3116,6 +3146,7 @@ function _captureMapState() {
         name: ov._name,
         domain: domain,
         customScale: ov._customScale || null,
+        noBg: ov._noBg || false,
       });
     } catch (e) { /* skip broken overlay */ }
   });
@@ -3198,6 +3229,7 @@ function _restoreMapState(state) {
         const ov = _dropLogoPin(anchorLatLng, l.name, domain);
         if (ov) {
           if (l.customScale) ov._customScale = l.customScale;
+          if (l.noBg) { ov._noBg = true; const p = ov._el?.querySelector('.lo-pin'); if (p) p.classList.add('no-bg'); }
           const dx = Math.abs(l.pos.lat - l.anchor.lat);
           const dy = Math.abs(l.pos.lng - l.anchor.lng);
           if (dx > 0.000001 || dy > 0.000001) {
