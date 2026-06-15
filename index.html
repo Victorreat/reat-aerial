@@ -1888,26 +1888,26 @@ const SECTORS = {
 // Each category maps to an array of focused search queries.
 // toggleCategory fires ALL queries in parallel for better coverage.
 const SECTOR_SEARCH = {
-  "Power Center Anchor": ["walmart", "target", "costco", "sams club", "big box store", "department store", "kohls", "meijer", "bass pro shops", "cabelas", "academy sports"],
-  "Grocery Anchor": ["grocery store", "supermarket", "kroger", "publix", "aldi", "whole foods", "trader joes", "h-e-b", "safeway", "food lion", "piggly wiggly", "sprouts farmers market", "winn dixie"],
-  "Junior Anchor": ["tjmaxx", "ross dress for less", "marshalls", "burlington", "homegoods", "nordstrom rack", "big lots", "tuesday morning", "five below", "ulta beauty", "dicks sporting goods"],
-  "Specialty Box": ["pet store", "petsmart", "petco", "hobby lobby", "michaels craft", "barnes noble bookstore", "bath body works", "crate barrel", "world market", "joann fabrics"],
-  "Dollar / Value": ["dollar general", "dollar tree", "family dollar", "five below", "99 cents store", "ollies bargain outlet"],
-  "Restaurants": ["restaurant", "fast food", "burger restaurant", "pizza restaurant", "taco restaurant", "chicken restaurant", "sandwich shop", "sub shop", "chinese restaurant", "mexican restaurant", "italian restaurant", "sushi restaurant", "thai restaurant", "seafood restaurant", "steakhouse", "bar and grill", "diner", "wings restaurant", "barbecue restaurant", "mediterranean restaurant", "indian restaurant", "vietnamese restaurant", "pho restaurant", "korean restaurant", "greek restaurant", "japanese restaurant", "ramen restaurant", "cajun restaurant", "breakfast restaurant", "brunch restaurant", "poke bowl", "soul food restaurant", "caribbean restaurant", "food truck"],
-  "QSR / Fast Casual": ["smoothie shop", "juice bar", "smoothie king", "tropical smoothie", "jamba juice", "ice cream shop", "frozen yogurt", "acai bowl", "wingstop", "chipotle", "jersey mikes", "jimmy johns", "firehouse subs", "which wich", "potbelly", "jason deli", "mcalister deli", "panera bread", "five guys", "shake shack", "raising canes", "chick fil a", "popeyes", "zaxbys", "whataburger", "in n out", "culvers", "sonic drive in", "dairy queen", "baskin robbins", "coldstone creamery", "insomnia cookies", "crumbl cookies"],
-  "Coffee / Café": ["coffee shop", "starbucks", "dunkin", "cafe bakery", "bagel shop", "dutch bros coffee", "peets coffee", "caribou coffee", "scooters coffee", "7 brew coffee", "black rifle coffee", "donut shop", "boba tea", "bubble tea"],
-  "Auto": ["gas station", "auto parts store", "car wash", "oil change", "tire shop", "auto repair", "autozone", "oreilly auto", "advance auto parts", "jiffy lube", "valvoline", "discount tire", "take 5 oil change"],
-  "Health & Wellness": ["pharmacy", "drugstore", "gym fitness", "urgent care", "hair salon", "nail salon", "dentist", "chiropractor", "physical therapy", "med spa", "massage", "orange theory", "planet fitness", "anytime fitness", "great clips", "supercuts", "cvs pharmacy", "walgreens"],
-  "Banking / Finance": ["bank branch", "credit union", "chase bank", "bank of america", "wells fargo", "truist bank", "pnc bank", "regions bank", "td bank", "us bank", "capital one bank"],
-  "Telecom": ["cell phone store", "verizon store", "t-mobile store", "at&t store", "cricket wireless", "boost mobile", "metro by t-mobile", "spectrum store"],
-  "Home Improvement": ["home depot", "lowes home improvement", "ace hardware", "paint store", "floor decor", "tractor supply", "harbor freight", "sherwin williams", "menards", "northern tool"],
-  "Furniture / Mattress": ["furniture store", "mattress store", "ashley furniture", "rooms to go", "mattress firm", "la-z-boy", "haverty furniture", "bobs discount furniture", "sleep number"],
-  "Apparel / Shoes": ["clothing store", "shoe store", "nike store", "old navy", "foot locker", "finish line", "famous footwear", "skechers store", "gap store", "h&m store", "express store", "american eagle"],
-  "Electronics": ["best buy", "electronics store", "apple store", "gamestop", "phone repair", "ubreakifix", "batteries plus"],
-  "Liquor / Wine": ["liquor store", "wine store", "total wine", "beer store", "specs liquor", "abc liquor", "twin liquors"],
-  "Shipping / Services": ["ups store", "fedex office", "post office", "storage facility", "u-haul", "public storage", "extra space storage", "life storage"],
-  "Education / Childcare": ["tutoring center", "learning center", "daycare", "childcare", "preschool", "kumon", "mathnasium", "sylvan learning", "kindercare", "goddard school", "primrose school"],
-  "Hotel / Hospitality": ["hotel", "motel", "marriott", "hilton hotel", "hampton inn", "holiday inn", "courtyard marriott", "fairfield inn", "home2 suites", "residence inn", "la quinta"],
+  "Power Center Anchor": ["walmart", "target", "costco", "sams club", "bjs wholesale", "big box store", "department store", "kohls", "jcpenney", "macys", "meijer", "best buy", "staples", "office depot", "dicks sporting goods", "bass pro shops", "cabelas", "academy sports"],
+  "Grocery Anchor": ["grocery store", "supermarket", "kroger", "publix", "aldi", "lidl", "whole foods", "trader joes", "h-e-b", "safeway", "albertsons", "jewel osco", "marianos", "harris teeter", "stop and shop", "giant food", "food lion", "winn dixie", "hy-vee", "wegmans", "giant eagle", "winco foods", "stater bros", "save a lot", "sprouts farmers market", "the fresh market", "natural grocers", "piggly wiggly"],
+  "Junior Anchor": ["tjmaxx", "ross dress for less", "marshalls", "burlington", "homegoods", "nordstrom rack", "saks off 5th", "big lots", "tuesday morning", "five below", "ulta beauty", "dicks sporting goods", "ollies bargain outlet", "ocean state job lot"],
+  "Specialty Box": ["pet store", "petsmart", "petco", "pet supplies plus", "hobby lobby", "michaels craft", "joann fabrics", "barnes noble bookstore", "books a million", "gamestop", "bath body works", "victorias secret", "crate barrel", "west elm", "pottery barn", "williams sonoma", "world market", "ikea", "restoration hardware", "container store"],
+  "Dollar / Value": ["dollar general", "dollar tree", "family dollar", "five below", "99 cents store", "ollies bargain outlet", "grocery outlet"],
+  "Restaurants": ["restaurant", "fast food", "burger restaurant", "pizza restaurant", "taco restaurant", "chicken restaurant", "sandwich shop", "sub shop", "chinese restaurant", "mexican restaurant", "italian restaurant", "sushi restaurant", "thai restaurant", "seafood restaurant", "steakhouse", "bar and grill", "diner", "wings restaurant", "barbecue restaurant", "mediterranean restaurant", "indian restaurant", "vietnamese restaurant", "pho restaurant", "korean restaurant", "greek restaurant", "japanese restaurant", "ramen restaurant", "cajun restaurant", "breakfast restaurant", "brunch restaurant", "poke bowl", "soul food restaurant", "caribbean restaurant", "food truck", "applebees", "chilis restaurant", "olive garden", "red lobster", "outback steakhouse", "texas roadhouse", "longhorn steakhouse", "buffalo wild wings", "red robin", "dennys", "ihop", "waffle house", "cracker barrel", "golden corral", "cheesecake factory", "tgi fridays", "bjs brewhouse", "cheddars scratch kitchen", "bob evans", "perkins restaurant", "benihana", "pf changs", "bonefish grill", "carrabbas", "yard house", "hooters", "dave and busters"],
+  "QSR / Fast Casual": ["mcdonalds", "burger king", "wendys", "taco bell", "chick fil a", "popeyes", "kfc", "raising canes", "wingstop", "zaxbys", "bojangles", "churchs chicken", "daves hot chicken", "el pollo loco", "pdq restaurant", "slim chickens", "dominos pizza", "pizza hut", "papa johns", "little caesars", "marcos pizza", "jets pizza", "mod pizza", "blaze pizza", "subway", "jimmy johns", "jersey mikes", "firehouse subs", "arbys", "charleys philly steaks", "which wich", "potbelly", "schlotzskys", "mcalister deli", "jason deli", "culvers", "sonic drive in", "whataburger", "jack in the box", "hardees", "carls jr", "steak n shake", "five guys", "shake shack", "smashburger", "freddys frozen custard", "habit burger", "in n out", "white castle", "del taco", "torchys tacos", "panda express", "teriyaki madness", "portillos", "chipotle", "panera bread", "qdoba", "moes southwest grill", "cava restaurant", "sweetgreen", "zoes kitchen", "freshii", "noodles and company", "first watch", "eggs up grill", "corner bakery", "au bon pain", "tropical smoothie", "smoothie king", "jamba juice", "dairy queen", "baskin robbins", "coldstone creamery", "auntie annes", "cinnabon", "wetzels pretzels", "crumbl cookies", "insomnia cookies"],
+  "Coffee / Café": ["coffee shop", "starbucks", "dunkin", "cafe bakery", "bagel shop", "dutch bros coffee", "peets coffee", "caribou coffee", "scooters coffee", "7 brew coffee", "black rifle coffee", "black rock coffee", "biggby coffee", "tim hortons", "human bean coffee", "ziggis coffee", "pjs coffee", "gloria jeans coffee", "einstein bagels", "brueggers bagels", "donut shop", "boba tea", "bubble tea"],
+  "Auto": ["gas station", "auto parts store", "car wash", "oil change", "tire shop", "auto repair", "autozone", "oreilly auto", "advance auto parts", "napa auto parts", "jiffy lube", "valvoline", "discount tire", "take 5 oil change", "grease monkey", "firestone auto", "midas auto", "meineke", "pep boys", "goodyear auto", "shell gas station", "bp gas station", "chevron", "exxon", "marathon gas", "sunoco", "citgo", "speedway", "circle k", "7-eleven", "sheetz", "wawa", "kwik trip", "caseys general store", "buc-ees", "racetrac", "mister car wash", "zips car wash", "tommys express car wash", "quick quack car wash", "carmax", "carvana"],
+  "Health & Wellness": ["pharmacy", "drugstore", "gym fitness", "urgent care", "hair salon", "nail salon", "dentist", "chiropractor", "physical therapy", "med spa", "massage envy", "cvs pharmacy", "walgreens", "rite aid", "planet fitness", "la fitness", "orangetheory fitness", "anytime fitness", "crunch fitness", "24 hour fitness", "golds gym", "ufc gym", "f45 training", "eos fitness", "lifetime fitness", "ymca", "snap fitness", "pure barre", "club pilates", "great clips", "sport clips", "supercuts", "fantastic sams", "hair cuttery", "hand and stone massage", "european wax center", "restore hyper wellness", "ulta beauty", "sephora", "afc urgent care", "fastmed urgent care"],
+  "Banking / Finance": ["bank branch", "credit union", "chase bank", "bank of america", "wells fargo", "truist bank", "pnc bank", "regions bank", "td bank", "us bank", "capital one bank", "citizens bank", "fifth third bank", "bmo harris bank", "key bank", "huntington bank", "navy federal credit union"],
+  "Telecom": ["cell phone store", "verizon store", "t-mobile store", "at&t store", "cricket wireless", "boost mobile", "metro by t-mobile", "spectrum store", "us cellular", "xfinity store"],
+  "Home Improvement": ["home depot", "lowes home improvement", "ace hardware", "true value hardware", "paint store", "floor decor", "tractor supply", "harbor freight", "sherwin williams", "benjamin moore", "menards", "northern tool", "lumber liquidators", "fastenal"],
+  "Furniture / Mattress": ["furniture store", "mattress store", "ashley furniture", "rooms to go", "mattress firm", "la-z-boy", "haverty furniture", "bobs discount furniture", "sleep number", "ethan allen", "arhaus furniture", "american furniture warehouse", "city furniture", "casper mattress", "purple mattress", "tempur pedic"],
+  "Apparel / Shoes": ["clothing store", "shoe store", "nike store", "adidas store", "old navy", "foot locker", "finish line", "famous footwear", "skechers store", "shoe carnival", "dsw shoes", "rack room shoes", "gap store", "h&m store", "zara store", "forever 21", "american eagle", "abercrombie fitch", "express store", "banana republic", "j crew", "lululemon", "under armour", "columbia sportswear", "rei store"],
+  "Electronics": ["best buy", "electronics store", "apple store", "microsoft store", "gamestop", "micro center", "phone repair", "ubreakifix", "cpr cell phone repair", "batteries plus"],
+  "Liquor / Wine": ["liquor store", "wine store", "total wine", "bevmo", "beer store", "specs liquor", "binnys beverage", "abc liquor", "twin liquors"],
+  "Shipping / Services": ["ups store", "fedex office", "post office", "storage facility", "u-haul", "public storage", "extra space storage", "life storage", "cubesmart storage", "pods moving", "postnet"],
+  "Education / Childcare": ["tutoring center", "learning center", "daycare", "childcare", "preschool", "kumon", "mathnasium", "sylvan learning", "huntington learning center", "kindercare", "goddard school", "primrose school", "bright horizons", "the learning experience", "kiddie academy"],
+  "Hotel / Hospitality": ["hotel", "motel", "marriott", "hilton hotel", "hampton inn", "holiday inn", "hyatt hotel", "best western", "courtyard marriott", "fairfield inn", "home2 suites", "residence inn", "la quinta", "comfort inn", "quality inn", "super 8 motel", "motel 6", "extended stay america"],
 };
 
 const CATEGORIES = [
@@ -1943,6 +1943,8 @@ let radiiCircles = {};
 let logoCount = 0;
 let brandLookup = null;
 let categoryMarkers = {}; // { catId: [overlay, ...] }
+let _activeMapId = null; // currently loaded/saved map ID for autosave
+let _autosaveTimer = null;
 let _activeUploadOverlay = null; // for logo upload targeting
 let _LogoOverlay = null; // defined inside initMap after Google Maps loads
 // Custom polygon draw state
@@ -2766,22 +2768,35 @@ function handleLogoUpload(e) {
   const key = e.target.dataset.logoKey;
   const reader = new FileReader();
   reader.onload = () => {
-    const dataUrl = reader.result;
-    // Save to localStorage
-    try {
-      const logos = JSON.parse(localStorage.getItem('reat_logos') || '{}');
-      logos[key] = dataUrl;
-      localStorage.setItem('reat_logos', JSON.stringify(logos));
-    } catch (err) {
-      setStatus('Logo too large to save — try a smaller image');
-      return;
-    }
-    // Update the overlay that triggered the upload
-    if (_activeUploadOverlay && _activeUploadOverlay._el) {
-      _activeUploadOverlay.updateLogo(dataUrl);
-    }
-    setStatus('Logo uploaded and saved');
-    _activeUploadOverlay = null;
+    // Resize to 128x128 max before saving — prevents distortion and saves space
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 128;
+      const canvas = document.createElement('canvas');
+      canvas.width = MAX; canvas.height = MAX;
+      const ctx = canvas.getContext('2d');
+      // Scale to fit within MAX x MAX, centered
+      const scale = Math.min(MAX / img.width, MAX / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.drawImage(img, (MAX - w) / 2, (MAX - h) / 2, w, h);
+      const dataUrl = canvas.toDataURL('image/png');
+      // Save to localStorage
+      try {
+        const logos = JSON.parse(localStorage.getItem('reat_logos') || '{}');
+        logos[key] = dataUrl;
+        localStorage.setItem('reat_logos', JSON.stringify(logos));
+      } catch (err) {
+        setStatus('Logo too large to save — try a smaller image');
+        return;
+      }
+      // Update the overlay that triggered the upload
+      if (_activeUploadOverlay && _activeUploadOverlay._el) {
+        _activeUploadOverlay.updateLogo(dataUrl);
+      }
+      setStatus('Logo uploaded and saved');
+      _activeUploadOverlay = null;
+    };
+    img.src = reader.result;
   };
   reader.readAsDataURL(file);
   e.target.value = ''; // reset so same file can be re-selected
@@ -3108,6 +3123,9 @@ function _getUserId() {
   return window.Clerk && window.Clerk.user ? window.Clerk.user.id : 'anonymous';
 }
 
+// Round to 6 decimal places (~11cm precision) to keep payloads small
+function _rd(v) { return Math.round(v * 1e6) / 1e6; }
+
 // Serialize current map state into a plain object
 function _captureMapState() {
   const state = {};
@@ -3115,7 +3133,7 @@ function _captureMapState() {
 
   // View
   const c = map.getCenter();
-  state.center = { lat: c.lat(), lng: c.lng() };
+  state.center = { lat: _rd(c.lat()), lng: _rd(c.lng()) };
   state.zoom = map.getZoom();
   state.heading = map.getHeading() || 0;
   state.tilt = map.getTilt() || 0;
@@ -3124,7 +3142,7 @@ function _captureMapState() {
   // Property
   state.address = document.getElementById('propertyBadge').textContent || '';
   if (subjectLocation) {
-    state.subjectLocation = { lat: subjectLocation.lat(), lng: subjectLocation.lng() };
+    state.subjectLocation = { lat: _rd(subjectLocation.lat()), lng: _rd(subjectLocation.lng()) };
   }
 
   // Logo pins — only save ones still on the map
@@ -3132,24 +3150,25 @@ function _captureMapState() {
   placedMarkers.forEach(ov => {
     try {
       if (!ov.getMap()) return; // skip removed overlays
-      const aLat = typeof ov._anchorPos.lat === 'function' ? ov._anchorPos.lat() : ov._anchorPos.lat;
-      const aLng = typeof ov._anchorPos.lng === 'function' ? ov._anchorPos.lng() : ov._anchorPos.lng;
-      const pLat = typeof ov._pos.lat === 'function' ? ov._pos.lat() : ov._pos.lat;
-      const pLng = typeof ov._pos.lng === 'function' ? ov._pos.lng() : ov._pos.lng;
+      const aLat = _rd(typeof ov._anchorPos.lat === 'function' ? ov._anchorPos.lat() : ov._anchorPos.lat);
+      const aLng = _rd(typeof ov._anchorPos.lng === 'function' ? ov._anchorPos.lng() : ov._anchorPos.lng);
+      const pLat = _rd(typeof ov._pos.lat === 'function' ? ov._pos.lat() : ov._pos.lat);
+      const pLng = _rd(typeof ov._pos.lng === 'function' ? ov._pos.lng() : ov._pos.lng);
       // Fill in missing domain via brand lookup before saving
       let domain = ov._domain || '';
       if (!domain) {
         const matched = lookupBrand(ov._name);
         if (matched) domain = matched.domain;
       }
-      state.logos.push({
+      const logo = {
         anchor: { lat: aLat, lng: aLng },
         pos: { lat: pLat, lng: pLng },
         name: ov._name,
         domain: domain,
-        customScale: ov._customScale || null,
-        noBg: ov._noBg || false,
-      });
+      };
+      if (ov._customScale) logo.customScale = ov._customScale;
+      if (ov._noBg) logo.noBg = true;
+      state.logos.push(logo);
     } catch (e) { /* skip broken overlay */ }
   });
 
@@ -3161,7 +3180,7 @@ function _captureMapState() {
       const path = poly.getPath();
       if (!path || path.getLength() === 0) return;
       const pts = [];
-      path.forEach(p => pts.push({ lat: p.lat(), lng: p.lng() }));
+      path.forEach(p => pts.push({ lat: _rd(p.lat()), lng: _rd(p.lng()) }));
       state.highlights.push({
         paths: pts,
         fillColor: poly.fillColor || poly.get('fillColor') || '#FFD700',
@@ -3283,27 +3302,59 @@ function _restoreMapState(state) {
 async function saveMap() {
   const nameEl = document.getElementById('saveMapName');
   const name = nameEl.value.trim();
-  if (!name) { nameEl.focus(); return; }
+  if (!name && !_activeMapId) { nameEl.focus(); return; }
 
   setStatus('Saving map…');
-  const state = _captureMapState();
-  const userId = _getUserId();
+  try {
+    const state = _captureMapState();
+    const payloadKB = Math.round(JSON.stringify(state).length / 1024);
+    console.log(`Save: ${state.logos.length} logos, ~${payloadKB}KB payload`);
+    const userId = _getUserId();
 
-  const { error } = await _supa.from('saved_maps').insert({
-    user_id: userId,
-    name: name,
-    map_state: state,
-  });
-
-  if (error) {
-    console.error('Save error:', error);
-    setStatus('Save failed — ' + error.message);
-    return;
+    if (_activeMapId) {
+      // Update existing map
+      const { error } = await _supa.from('saved_maps')
+        .update({ map_state: state })
+        .eq('id', _activeMapId);
+      if (error) { setStatus('Save failed — ' + error.message); return; }
+      setStatus('Map saved');
+    } else {
+      // Create new map
+      const { data, error } = await _supa.from('saved_maps').insert({
+        user_id: userId,
+        name: name,
+        map_state: state,
+      }).select('id').single();
+      if (error) { setStatus('Save failed — ' + error.message); return; }
+      _activeMapId = data.id;
+      nameEl.value = '';
+      setStatus(`Map "${name}" saved`);
+      _startAutosave();
+    }
+    loadSavedMapsList();
+  } catch (e) {
+    console.error('Save error:', e);
+    setStatus('Save failed — ' + (e.message || e));
   }
+}
 
-  nameEl.value = '';
-  setStatus(`Map "${name}" saved`);
-  loadSavedMapsList();
+function _startAutosave() {
+  if (_autosaveTimer) clearInterval(_autosaveTimer);
+  _autosaveTimer = setInterval(_autosave, 30000); // every 30 seconds
+}
+
+async function _autosave() {
+  if (!_activeMapId) return;
+  try {
+    const state = _captureMapState();
+    const { error } = await _supa.from('saved_maps')
+      .update({ map_state: state })
+      .eq('id', _activeMapId);
+    if (!error) setStatus('Autosaved');
+    else console.warn('Autosave failed:', error.message);
+  } catch (e) {
+    console.warn('Autosave error:', e.message || e);
+  }
 }
 
 async function loadSavedMapsList() {
@@ -3345,13 +3396,19 @@ async function loadMap(id) {
   }
 
   _restoreMapState(data.map_state);
-  setStatus(`Loaded "${data.name}"`);
+  _activeMapId = id;
+  _startAutosave();
+  setStatus(`Loaded "${data.name}" — autosave on`);
 }
 
 async function deleteMap(id, name) {
   if (!confirm(`Delete "${name}"?`)) return;
   const { error } = await _supa.from('saved_maps').delete().eq('id', id);
   if (error) { setStatus('Delete failed'); return; }
+  if (_activeMapId === id) {
+    _activeMapId = null;
+    if (_autosaveTimer) { clearInterval(_autosaveTimer); _autosaveTimer = null; }
+  }
   setStatus(`"${name}" deleted`);
   loadSavedMapsList();
 }
