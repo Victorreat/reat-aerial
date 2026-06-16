@@ -2628,7 +2628,8 @@ function toggleCategory(catId) {
     if (seenPlaceIds.has(r.place_id)) return;
     seenPlaceIds.add(r.place_id);
     const matched = lookupBrand(r.name);
-    const ov = _dropLogoPin(r.geometry.location, r.name, matched ? matched.domain : '');
+    if (!matched) return; // skip local/unknown businesses — only place known brands
+    const ov = _dropLogoPin(r.geometry.location, r.name, matched.domain);
     if (ov) categoryMarkers[catId].push(ov);
     foundCount++;
   }
