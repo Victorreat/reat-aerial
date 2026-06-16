@@ -992,9 +992,13 @@
       <div class="sidebar-section">
         <div class="section-label collapsible" onclick="toggleSection(this)">Saved Maps</div>
         <div class="section-body">
+          <div id="activeMapBar" style="display:none;font-size:10px;color:var(--gold);padding:4px 0;margin-bottom:4px;">
+            <span>Editing: <strong id="activeMapName"></strong></span>
+            <button class="btn" style="padding:2px 6px;font-size:9px;margin-left:6px;color:var(--text-muted);border:1px solid var(--border);" onclick="detachMap()">+ New</button>
+          </div>
           <div class="save-row">
             <input type="text" class="manual-add-input name-input" id="saveMapName" placeholder="Map name…" onkeydown="if(event.key==='Enter')saveMap()" />
-            <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" onclick="saveMap()">Save</button>
+            <button class="btn btn-gold" style="padding:5px 8px;font-size:9px;flex-shrink:0;" id="saveMapBtn" onclick="saveMap()">Save</button>
           </div>
           <div class="saved-maps-list" id="savedMapsList">
             <span style="font-size:10px;color:var(--text-muted);">No saved maps</span>
@@ -1944,7 +1948,35 @@ let logoCount = 0;
 let brandLookup = null;
 let categoryMarkers = {}; // { catId: [overlay, ...] }
 let _activeMapId = null; // currently loaded/saved map ID for autosave
+let _activeMapName = null;
 let _autosaveTimer = null;
+
+function _setActiveMap(id, name) {
+  _activeMapId = id;
+  _activeMapName = name || '';
+  const bar = document.getElementById('activeMapBar');
+  const nameEl = document.getElementById('activeMapName');
+  const input = document.getElementById('saveMapName');
+  const btn = document.getElementById('saveMapBtn');
+  if (id) {
+    bar.style.display = '';
+    nameEl.textContent = _activeMapName;
+    input.style.display = 'none';
+    btn.textContent = 'Save';
+  } else {
+    bar.style.display = 'none';
+    nameEl.textContent = '';
+    input.style.display = '';
+    input.value = '';
+    btn.textContent = 'Save';
+  }
+}
+
+function detachMap() {
+  if (_autosaveTimer) { clearInterval(_autosaveTimer); _autosaveTimer = null; }
+  _setActiveMap(null, null);
+  setStatus('Detached — enter a name to save as new map');
+}
 let _activeUploadOverlay = null; // for logo upload targeting
 let _LogoOverlay = null; // defined inside initMap after Google Maps loads
 // Custom polygon draw state
@@ -3327,8 +3359,7 @@ async function saveMap() {
         map_state: state,
       }).select('id').single();
       if (error) { setStatus('Save failed — ' + error.message); return; }
-      _activeMapId = data.id;
-      nameEl.value = '';
+      _setActiveMap(data.id, name);
       setStatus(`Map "${name}" saved`);
       _startAutosave();
     }
@@ -3397,7 +3428,7 @@ async function loadMap(id) {
   }
 
   _restoreMapState(data.map_state);
-  _activeMapId = id;
+  _setActiveMap(id, data.name);
   _startAutosave();
   setStatus(`Loaded "${data.name}" — autosave on`);
 }
@@ -3407,8 +3438,8 @@ async function deleteMap(id, name) {
   const { error } = await _supa.from('saved_maps').delete().eq('id', id);
   if (error) { setStatus('Delete failed'); return; }
   if (_activeMapId === id) {
-    _activeMapId = null;
     if (_autosaveTimer) { clearInterval(_autosaveTimer); _autosaveTimer = null; }
+    _setActiveMap(null, null);
   }
   setStatus(`"${name}" deleted`);
   loadSavedMapsList();
