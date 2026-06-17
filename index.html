@@ -2984,29 +2984,21 @@ async function exportImage(format, size) {
 
   const mapContainer = document.querySelector('.map-container');
   const sidebar = document.querySelector('.sidebar');
-  const appBody = document.querySelector('.app-body');
 
-  // Target dimensions — A3 landscape by default
+  // Target dimensions
   const dims = EXPORT_SIZES[size] || EXPORT_SIZES.A3;
   const TW = dims.w, TH = dims.h;
   const SH = 60; // branding strip height
-  const mapH = TH - SH; // map area height
 
-  // --- Force map container to landscape dimensions for capture ---
-  const origMapStyle = mapContainer.style.cssText;
+  // --- Hide sidebar so map fills the viewport ---
   const origSidebarDisplay = sidebar ? sidebar.style.display : '';
-  const origAppBodyStyle = appBody ? appBody.style.cssText : '';
-
-  // Hide sidebar, force map to fill at landscape ratio
   if (sidebar) sidebar.style.display = 'none';
-  if (appBody) { appBody.style.cssText += ';width:' + TW + 'px;height:' + mapH + 'px;position:relative;'; }
-  mapContainer.style.cssText += ';width:' + TW + 'px !important;height:' + mapH + 'px !important;position:absolute;top:0;left:0;';
 
-  // Trigger Google Maps resize to fill new dimensions
+  // Trigger Google Maps resize to fill available space
   google.maps.event.trigger(map, 'resize');
-  map.setCenter(map.getCenter()); // re-center after resize
+  map.setCenter(map.getCenter());
 
-  // Wait for map tiles to re-render at new size
+  // Wait for map tiles to re-render
   await new Promise(r => setTimeout(r, 1500));
 
   // Temporarily hide UI controls that shouldn't appear in export
@@ -3021,24 +3013,25 @@ async function exportImage(format, size) {
   // Force clean rendering for export only
   logoImgs.forEach(img => { img.style.objectFit = 'cover'; img.style.objectPosition = 'center'; });
 
-  setStatus('Capturing landscape map — please wait…');
+  setStatus('Capturing map — please wait…');
+
+  // Capture at actual screen size, scale up to target resolution
+  const captureW = mapContainer.offsetWidth;
+  const captureH = mapContainer.offsetHeight;
+  const scaleFactor = Math.max(TW / captureW, (TH - SH) / captureH);
 
   try {
     const canvas = await html2canvas(mapContainer, {
       useCORS: true,
       allowTaint: false,
-      width: TW,
-      height: mapH,
-      scale: 1, // already at target pixel dimensions
+      scale: scaleFactor,
       logging: false,
       backgroundColor: '#1a2e1a',
       imageTimeout: 15000,
     });
 
-    // --- Restore original layout ---
-    mapContainer.style.cssText = origMapStyle;
+    // --- Restore sidebar ---
     if (sidebar) sidebar.style.display = origSidebarDisplay;
-    if (appBody) appBody.style.cssText = origAppBodyStyle;
     google.maps.event.trigger(map, 'resize');
     map.setCenter(map.getCenter());
 
@@ -3058,13 +3051,26 @@ async function exportImage(format, size) {
     });
 
     // Build final canvas with branding strip
+    const mapH = TH - SH;
     const finalCanvas = document.createElement('canvas');
     finalCanvas.width = TW;
     finalCanvas.height = TH;
     const ctx = finalCanvas.getContext('2d');
 
-    // Draw captured landscape map
-    ctx.drawImage(canvas, 0, 0, TW, mapH);
+    // Draw captured map scaled/cropped to fill target area (landscape)
+    const srcAspect = canvas.width / canvas.height;
+    const dstAspect = TW / mapH;
+    let sx = 0, sy = 0, sw = canvas.width, sh = canvas.height;
+    if (srcAspect > dstAspect) {
+      // Source is wider — crop sides
+      sw = canvas.height * dstAspect;
+      sx = (canvas.width - sw) / 2;
+    } else {
+      // Source is taller — crop top/bottom
+      sh = canvas.width / dstAspect;
+      sy = (canvas.height - sh) / 2;
+    }
+    ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, TW, mapH);
 
     // Branding strip at bottom
     ctx.fillStyle = 'rgba(26,46,26,0.95)';
@@ -3122,12 +3128,9 @@ async function exportImage(format, size) {
 
   } catch (err) {
     // Restore layout on error
-    mapContainer.style.cssText = origMapStyle;
     if (sidebar) sidebar.style.display = origSidebarDisplay;
-    if (appBody) appBody.style.cssText = origAppBodyStyle;
     google.maps.event.trigger(map, 'resize');
     map.setCenter(map.getCenter());
-    // Restore hidden UI on error
     hideEls.forEach(el => el.style.display = '');
     document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg').forEach(el => el.style.removeProperty('display'));
     logoImgs.forEach(img => {
