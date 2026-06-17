@@ -2993,37 +2993,56 @@ const EXPORT_SIZES = { A3: { w: 3307, h: 2339 }, A4: { w: 2339, h: 1654 } };
 async function exportImage(format, size) {
   if (!map) return;
   hideExport();
-  setStatus('Preparing logos for export…');
+  setStatus('Preparing export — reshaping to landscape…');
 
   const mapContainer = document.querySelector('.map-container');
   const sidebar = document.querySelector('.sidebar');
+  const appBody = document.querySelector('.app-body');
 
   // Target dimensions
   const dims = EXPORT_SIZES[size] || EXPORT_SIZES.A3;
   const TW = dims.w, TH = dims.h;
   const SH = 60; // branding strip height
+  const mapH = TH - SH;
+  const targetAspect = TW / mapH; // landscape aspect ratio (~1.41 for A3)
 
-  // --- Hide sidebar so map fills the viewport ---
+  // Save original styles
   const origSidebarDisplay = sidebar ? sidebar.style.display : '';
+  const origMapStyle = mapContainer.style.cssText;
+  const origAppBodyStyle = appBody ? appBody.style.cssText : '';
+  const savedCenter = map.getCenter();
+
+  // Hide sidebar, reshape map container to landscape aspect ratio within viewport
   if (sidebar) sidebar.style.display = 'none';
+  const vpW = window.innerWidth;
+  const vpH = window.innerHeight - (document.querySelector('header')?.offsetHeight || 0);
+  // Fit landscape ratio within viewport
+  let layoutW = vpW;
+  let layoutH = Math.round(vpW / targetAspect);
+  if (layoutH > vpH) {
+    layoutH = vpH;
+    layoutW = Math.round(vpH * targetAspect);
+  }
+  if (appBody) appBody.style.cssText += `;width:${layoutW}px;height:${layoutH}px;position:relative;overflow:hidden;`;
+  mapContainer.style.cssText += `;width:${layoutW}px !important;height:${layoutH}px !important;position:absolute;top:0;left:0;`;
 
-  // Trigger Google Maps resize to fill available space
+  // Re-render map at landscape ratio
   google.maps.event.trigger(map, 'resize');
-  map.setCenter(map.getCenter());
+  map.setCenter(savedCenter);
 
-  // Wait for map tiles to re-render
-  await new Promise(r => setTimeout(r, 1500));
+  // Wait for tiles to load at new dimensions
+  await new Promise(r => setTimeout(r, 2000));
 
-  // Temporarily hide UI controls that shouldn't appear in export
+  // Hide UI controls
   const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator, .place-indicator');
   hideEls.forEach(el => el.style.display = 'none');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize').forEach(el => el.style.setProperty('display','none','important'));
 
-  // Convert all logo images to inline data URLs so html2canvas can render them
+  // Convert logo images to data URLs for html2canvas
   const logoImgs = mapContainer.querySelectorAll('.lo-pin-img');
   await Promise.all(Array.from(logoImgs).map(_imgToDataUrl));
 
-  // Ensure only img OR initial is visible per pin, never both
+  // Ensure only img OR initial is visible per pin
   mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
     const img = pin.querySelector('.lo-pin-img');
     const initial = pin.querySelector('.lo-pin-initial');
@@ -3032,32 +3051,33 @@ async function exportImage(format, size) {
     }
   });
 
-  setStatus('Capturing map — please wait…');
+  setStatus('Capturing landscape map — please wait…');
 
-  // Capture at actual screen size, scale up to target resolution
-  const captureW = mapContainer.offsetWidth;
-  const captureH = mapContainer.offsetHeight;
-  const scaleFactor = Math.max(TW / captureW, (TH - SH) / captureH);
+  // Scale factor to reach target pixel dimensions from the layout size
+  const scaleFactor = TW / layoutW;
 
   try {
     const canvas = await html2canvas(mapContainer, {
       useCORS: true,
       allowTaint: false,
+      width: layoutW,
+      height: layoutH,
       scale: scaleFactor,
       logging: false,
       backgroundColor: '#1a2e1a',
       imageTimeout: 15000,
     });
 
-    // --- Restore sidebar ---
+    // --- Restore original layout ---
+    mapContainer.style.cssText = origMapStyle;
     if (sidebar) sidebar.style.display = origSidebarDisplay;
+    if (appBody) appBody.style.cssText = origAppBodyStyle;
     google.maps.event.trigger(map, 'resize');
-    map.setCenter(map.getCenter());
+    map.setCenter(savedCenter);
 
     // Restore hidden UI
     hideEls.forEach(el => el.style.display = '');
     document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize').forEach(el => el.style.removeProperty('display'));
-    // Restore initial fallback visibility
     mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => el.style.removeProperty('display'));
     logoImgs.forEach(img => {
       if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
@@ -3070,26 +3090,13 @@ async function exportImage(format, size) {
     });
 
     // Build final canvas with branding strip
-    const mapH = TH - SH;
     const finalCanvas = document.createElement('canvas');
     finalCanvas.width = TW;
     finalCanvas.height = TH;
     const ctx = finalCanvas.getContext('2d');
 
-    // Draw captured map scaled/cropped to fill target area (landscape)
-    const srcAspect = canvas.width / canvas.height;
-    const dstAspect = TW / mapH;
-    let sx = 0, sy = 0, sw = canvas.width, sh = canvas.height;
-    if (srcAspect > dstAspect) {
-      // Source is wider — crop sides
-      sw = canvas.height * dstAspect;
-      sx = (canvas.width - sw) / 2;
-    } else {
-      // Source is taller — crop top/bottom
-      sh = canvas.width / dstAspect;
-      sy = (canvas.height - sh) / 2;
-    }
-    ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, TW, mapH);
+    // Draw captured landscape map
+    ctx.drawImage(canvas, 0, 0, TW, mapH);
 
     // Branding strip at bottom
     ctx.fillStyle = 'rgba(26,46,26,0.95)';
@@ -3147,9 +3154,11 @@ async function exportImage(format, size) {
 
   } catch (err) {
     // Restore layout on error
+    mapContainer.style.cssText = origMapStyle;
     if (sidebar) sidebar.style.display = origSidebarDisplay;
+    if (appBody) appBody.style.cssText = origAppBodyStyle;
     google.maps.event.trigger(map, 'resize');
-    map.setCenter(map.getCenter());
+    map.setCenter(savedCenter);
     hideEls.forEach(el => el.style.display = '');
     document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize').forEach(el => el.style.removeProperty('display'));
     mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => el.style.removeProperty('display'));
@@ -3274,6 +3283,14 @@ function _captureMapState() {
     state.activeCategories.push(btn.dataset.catId);
   });
 
+  // Layer toggle states
+  state.layers = {
+    roads: layersState.roads,
+    businesses: layersState.businesses,
+    traffic: layersState.traffic,
+    siteMarker: document.getElementById('tog-site-marker')?.classList.contains('on') ?? true,
+  };
+
   return state;
 }
 
@@ -3371,6 +3388,22 @@ function _restoreMapState(state) {
       const btn = document.querySelector(`.cat-btn[data-cat-id="${catId}"]`);
       if (btn) btn.classList.add('active');
     });
+  }
+
+  // Restore layer toggle states
+  if (state.layers) {
+    layersState.roads = state.layers.roads ?? true;
+    layersState.businesses = state.layers.businesses ?? true;
+    layersState.traffic = state.layers.traffic ?? true;
+    document.getElementById('tog-roads').classList.toggle('on', layersState.roads);
+    document.getElementById('tog-businesses').classList.toggle('on', layersState.businesses);
+    document.getElementById('tog-traffic').classList.toggle('on', layersState.traffic);
+    layersState.traffic ? trafficLayer.setMap(map) : trafficLayer.setMap(null);
+    applyLabelVisibility();
+    if (state.layers.siteMarker === false && subjectMarker) {
+      subjectMarker.setVisible(false);
+      document.getElementById('tog-site-marker').classList.remove('on');
+    }
   }
 }
 
