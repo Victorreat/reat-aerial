@@ -3006,10 +3006,8 @@ async function exportImage(format, size) {
   const mapH = TH - SH;
   const targetAspect = TW / mapH; // landscape aspect ratio (~1.41 for A3)
 
-  // Save original styles
+  // Save state
   const origSidebarDisplay = sidebar ? sidebar.style.display : '';
-  const origMapStyle = mapContainer.style.cssText;
-  const origAppBodyStyle = appBody ? appBody.style.cssText : '';
   const savedCenter = map.getCenter();
 
   // Hide sidebar, reshape map container to landscape aspect ratio within viewport
@@ -3023,8 +3021,8 @@ async function exportImage(format, size) {
     layoutH = vpH;
     layoutW = Math.round(vpH * targetAspect);
   }
-  if (appBody) appBody.style.cssText += `;width:${layoutW}px;height:${layoutH}px;position:relative;overflow:hidden;`;
-  mapContainer.style.cssText += `;width:${layoutW}px !important;height:${layoutH}px !important;position:absolute;top:0;left:0;`;
+  if (appBody) appBody.setAttribute('style', `width:${layoutW}px;height:${layoutH}px;position:relative;overflow:hidden;`);
+  mapContainer.setAttribute('style', `width:${layoutW}px;height:${layoutH}px;position:absolute;top:0;left:0;`);
 
   // Re-render map at landscape ratio
   google.maps.event.trigger(map, 'resize');
@@ -3069,9 +3067,9 @@ async function exportImage(format, size) {
     });
 
     // --- Restore original layout ---
-    mapContainer.style.cssText = origMapStyle;
+    mapContainer.removeAttribute('style');
+    if (appBody) appBody.removeAttribute('style');
     if (sidebar) sidebar.style.display = origSidebarDisplay;
-    if (appBody) appBody.style.cssText = origAppBodyStyle;
     google.maps.event.trigger(map, 'resize');
     map.setCenter(savedCenter);
 
@@ -3154,9 +3152,9 @@ async function exportImage(format, size) {
 
   } catch (err) {
     // Restore layout on error
-    mapContainer.style.cssText = origMapStyle;
+    mapContainer.removeAttribute('style');
+    if (appBody) appBody.removeAttribute('style');
     if (sidebar) sidebar.style.display = origSidebarDisplay;
-    if (appBody) appBody.style.cssText = origAppBodyStyle;
     google.maps.event.trigger(map, 'resize');
     map.setCenter(savedCenter);
     hideEls.forEach(el => el.style.display = '');
