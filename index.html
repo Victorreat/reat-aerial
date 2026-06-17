@@ -2678,10 +2678,21 @@ function toggleCategory(catId) {
   // Landmark categories show all results (no brand filtering)
   const isLandmark = (catId === 'Hospital' || catId === 'Schools');
 
+  // Determine search radius: largest active trade area radius, or 3 miles default
+  const activeRadii = Object.keys(radiiCircles).map(Number);
+  const maxRadiusMiles = activeRadii.length > 0 ? Math.max(...activeRadii) : 3;
+  const maxRadiusMeters = maxRadiusMiles * 1609.34;
+  const searchCenter = subjectLocation || map.getCenter();
+
+  function _withinTradeArea(loc) {
+    return google.maps.geometry.spherical.computeDistanceBetween(searchCenter, loc) <= maxRadiusMeters;
+  }
+
   function placeResult(r) {
     if (!r.geometry || !r.place_id) return;
     if (seenPlaceIds.has(r.place_id)) return;
     seenPlaceIds.add(r.place_id);
+    if (!_withinTradeArea(r.geometry.location)) return; // skip results outside trade area
     const matched = lookupBrand(r.name);
     if (!isLandmark && !matched) return; // skip local/unknown for retail categories
     const ov = _dropLogoPin(r.geometry.location, r.name, matched ? matched.domain : '');
@@ -2692,8 +2703,8 @@ function toggleCategory(catId) {
   function checkDone() {
     btn.querySelector('.cat-count').textContent = foundCount || '';
     setStatus(foundCount > 0
-      ? `${foundCount} ${catId} location(s) found`
-      : `No ${catId} found in current view`);
+      ? `${foundCount} ${catId} location(s) within ${maxRadiusMiles} mi`
+      : `No ${catId} found within ${maxRadiusMiles} mi`);
   }
 
   queries.forEach(q => {
