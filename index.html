@@ -2977,13 +2977,22 @@ async function _imgToDataUrl(img) {
     }
   } catch {}
 
-  // 3. Last resort — show initial letter fallback
+  // 3. Last resort — generate a simple colored circle with initial letter as data URL
   const pin = img.closest('.lo-pin');
   if (pin) {
-    const initial = pin.querySelector('.lo-pin-initial');
-    if (initial) initial.style.setProperty('display','flex','important');
-    img._wasHidden = true;
-    img.style.setProperty('display','none','important');
+    const name = pin.querySelector('.lo-pin-tooltip')?.textContent || '?';
+    const letter = name.charAt(0).toUpperCase();
+    const c = document.createElement('canvas');
+    c.width = 64; c.height = 64;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#6a8a5a';
+    cx.beginPath(); cx.arc(32, 32, 32, 0, Math.PI * 2); cx.fill();
+    cx.fillStyle = '#fff';
+    cx.font = 'bold 32px sans-serif';
+    cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.fillText(letter, 32, 34);
+    img._origSrc = img.src;
+    img.src = c.toDataURL();
   }
 }
 
@@ -3036,29 +3045,27 @@ async function exportImage(format, size) {
   hideEls.forEach(el => el.style.display = 'none');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize').forEach(el => el.style.setProperty('display','none','important'));
 
-  // Only convert VISIBLE logo images to data URLs (skip off-screen ones)
+  // Hide ALL initial-letter placeholders first — they cause black circles and overlap
+  mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => el.style.setProperty('display','none','important'));
+
+  // Only process VISIBLE pins (skip off-screen for performance)
   const containerRect = mapContainer.getBoundingClientRect();
   const logoImgs = [];
   mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
     const rect = pin.getBoundingClientRect();
     const visible = rect.right > containerRect.left && rect.left < containerRect.right &&
                     rect.bottom > containerRect.top && rect.top < containerRect.bottom;
-    const img = pin.querySelector('.lo-pin-img');
-    const initial = pin.querySelector('.lo-pin-initial');
     if (!visible) {
-      // Hide off-screen pins entirely for faster capture
       pin.style.setProperty('display','none','important');
       pin._wasOffscreen = true;
     } else {
+      const img = pin.querySelector('.lo-pin-img');
       if (img) logoImgs.push(img);
-      // Ensure only img OR initial visible
-      if (img && img.style.display !== 'none' && img.src) {
-        if (initial) initial.style.setProperty('display','none','important');
-      }
     }
   });
 
   setStatus(`Converting ${logoImgs.length} logos for export…`);
+  // _imgToDataUrl will re-show initials only for images that truly fail
   await Promise.all(logoImgs.map(_imgToDataUrl));
 
   setStatus('Capturing landscape map — please wait…');
