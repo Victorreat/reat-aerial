@@ -919,7 +919,7 @@
     text-transform: uppercase;
     margin-top: -16px;
   }
-  #app-content { display: none; }
+  #app-content { display: none; flex: 1; flex-direction: column; min-height: 0; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -3545,7 +3545,7 @@ async function deleteMap(id, name) {
       if (window.Clerk.user) {
         // Signed in — show the app
         document.getElementById('clerk-login-screen').style.display = 'none';
-        document.getElementById('app-content').style.display = 'block';
+        document.getElementById('app-content').style.display = 'flex';
         // Load saved maps list
         if (typeof loadSavedMapsList === 'function') loadSavedMapsList();
       } else {
