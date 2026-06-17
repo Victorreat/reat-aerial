@@ -3036,23 +3036,35 @@ async function exportImage(format, size) {
   hideEls.forEach(el => el.style.display = 'none');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize').forEach(el => el.style.setProperty('display','none','important'));
 
-  // Convert logo images to data URLs for html2canvas
-  const logoImgs = mapContainer.querySelectorAll('.lo-pin-img');
-  await Promise.all(Array.from(logoImgs).map(_imgToDataUrl));
-
-  // Ensure only img OR initial is visible per pin
+  // Only convert VISIBLE logo images to data URLs (skip off-screen ones)
+  const containerRect = mapContainer.getBoundingClientRect();
+  const logoImgs = [];
   mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
+    const rect = pin.getBoundingClientRect();
+    const visible = rect.right > containerRect.left && rect.left < containerRect.right &&
+                    rect.bottom > containerRect.top && rect.top < containerRect.bottom;
     const img = pin.querySelector('.lo-pin-img');
     const initial = pin.querySelector('.lo-pin-initial');
-    if (img && img.style.display !== 'none' && img.src && !img._wasHidden) {
-      if (initial) initial.style.setProperty('display','none','important');
+    if (!visible) {
+      // Hide off-screen pins entirely for faster capture
+      pin.style.setProperty('display','none','important');
+      pin._wasOffscreen = true;
+    } else {
+      if (img) logoImgs.push(img);
+      // Ensure only img OR initial visible
+      if (img && img.style.display !== 'none' && img.src) {
+        if (initial) initial.style.setProperty('display','none','important');
+      }
     }
   });
 
+  setStatus(`Converting ${logoImgs.length} logos for export…`);
+  await Promise.all(logoImgs.map(_imgToDataUrl));
+
   setStatus('Capturing landscape map — please wait…');
 
-  // Scale factor to reach target pixel dimensions from the layout size
-  const scaleFactor = TW / layoutW;
+  // Scale factor capped at 2x to prevent freezing
+  const scaleFactor = Math.min(2, TW / layoutW);
 
   try {
     const canvas = await html2canvas(mapContainer, {
@@ -3063,7 +3075,7 @@ async function exportImage(format, size) {
       scale: scaleFactor,
       logging: false,
       backgroundColor: '#1a2e1a',
-      imageTimeout: 15000,
+      imageTimeout: 5000,
     });
 
     // --- Restore original layout ---
@@ -3074,18 +3086,7 @@ async function exportImage(format, size) {
     map.setCenter(savedCenter);
 
     // Restore hidden UI
-    hideEls.forEach(el => el.style.display = '');
-    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize').forEach(el => el.style.removeProperty('display'));
-    mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => el.style.removeProperty('display'));
-    logoImgs.forEach(img => {
-      if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
-      if (img._wasHidden) {
-        img.style.removeProperty('display');
-        const init = img.closest('.lo-pin')?.querySelector('.lo-pin-initial');
-        if (init) init.style.removeProperty('display');
-        delete img._wasHidden;
-      }
-    });
+    _restoreExportUI(hideEls, logoImgs, mapContainer);
 
     // Build final canvas with branding strip
     const finalCanvas = document.createElement('canvas');
@@ -3157,21 +3158,29 @@ async function exportImage(format, size) {
     if (sidebar) sidebar.style.display = origSidebarDisplay;
     google.maps.event.trigger(map, 'resize');
     map.setCenter(savedCenter);
-    hideEls.forEach(el => el.style.display = '');
-    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize').forEach(el => el.style.removeProperty('display'));
-    mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => el.style.removeProperty('display'));
-    logoImgs.forEach(img => {
-      if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
-      if (img._wasHidden) {
-        img.style.removeProperty('display');
-        const init = img.closest('.lo-pin')?.querySelector('.lo-pin-initial');
-        if (init) init.style.removeProperty('display');
-        delete img._wasHidden;
-      }
-    });
+    _restoreExportUI(hideEls, logoImgs, mapContainer);
     console.error('Export error:', err);
     setStatus('Export failed — use PDF print instead');
   }
+}
+
+function _restoreExportUI(hideEls, logoImgs, mapContainer) {
+  hideEls.forEach(el => el.style.display = '');
+  document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize').forEach(el => el.style.removeProperty('display'));
+  mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => el.style.removeProperty('display'));
+  // Restore off-screen pins
+  mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
+    if (pin._wasOffscreen) { pin.style.removeProperty('display'); delete pin._wasOffscreen; }
+  });
+  logoImgs.forEach(img => {
+    if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
+    if (img._wasHidden) {
+      img.style.removeProperty('display');
+      const init = img.closest('.lo-pin')?.querySelector('.lo-pin-initial');
+      if (init) init.style.removeProperty('display');
+      delete img._wasHidden;
+    }
+  });
 }
 
 function copyShareLink() {
