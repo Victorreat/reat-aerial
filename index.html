@@ -3004,14 +3004,20 @@ async function exportImage(format, size) {
   // Temporarily hide UI controls that shouldn't appear in export
   const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator, .place-indicator');
   hideEls.forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg').forEach(el => el.style.setProperty('display','none','important'));
+  document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize').forEach(el => el.style.setProperty('display','none','important'));
 
   // Convert all logo images to inline data URLs so html2canvas can render them
   const logoImgs = mapContainer.querySelectorAll('.lo-pin-img');
   await Promise.all(Array.from(logoImgs).map(_imgToDataUrl));
 
-  // Force clean rendering for export only
-  logoImgs.forEach(img => { img.style.objectFit = 'cover'; img.style.objectPosition = 'center'; });
+  // Ensure only img OR initial is visible per pin, never both
+  mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
+    const img = pin.querySelector('.lo-pin-img');
+    const initial = pin.querySelector('.lo-pin-initial');
+    if (img && img.style.display !== 'none' && img.src && !img._wasHidden) {
+      if (initial) initial.style.setProperty('display','none','important');
+    }
+  });
 
   setStatus('Capturing map — please wait…');
 
@@ -3037,10 +3043,10 @@ async function exportImage(format, size) {
 
     // Restore hidden UI
     hideEls.forEach(el => el.style.display = '');
-    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg').forEach(el => el.style.removeProperty('display'));
+    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize').forEach(el => el.style.removeProperty('display'));
+    // Restore initial fallback visibility
+    mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => el.style.removeProperty('display'));
     logoImgs.forEach(img => {
-      img.style.removeProperty('object-fit');
-      img.style.removeProperty('object-position');
       if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
       if (img._wasHidden) {
         img.style.removeProperty('display');
@@ -3132,10 +3138,9 @@ async function exportImage(format, size) {
     google.maps.event.trigger(map, 'resize');
     map.setCenter(map.getCenter());
     hideEls.forEach(el => el.style.display = '');
-    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg').forEach(el => el.style.removeProperty('display'));
+    document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize').forEach(el => el.style.removeProperty('display'));
+    mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => el.style.removeProperty('display'));
     logoImgs.forEach(img => {
-      img.style.removeProperty('object-fit');
-      img.style.removeProperty('object-position');
       if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
       if (img._wasHidden) {
         img.style.removeProperty('display');
