@@ -1584,16 +1584,9 @@ const SECTORS = {
       ],
     }
   },
-  "Health & Wellness": {
-    icon: "💊",
+  "Fitness": {
+    icon: "💪",
     sub: {
-      "Pharmacy": [
-        { name: "CVS", domain: "cvs.com", icon: "💊" },
-        { name: "Walgreens", domain: "walgreens.com", icon: "💊" },
-        { name: "Rite Aid", domain: "riteaid.com", icon: "💊" },
-        { name: "Walmart Pharmacy", domain: "walmart.com", icon: "💊" },
-        { name: "Kroger Pharmacy", domain: "kroger.com", icon: "💊" },
-      ],
       "Fitness": [
         { name: "Planet Fitness", domain: "planetfitness.com", icon: "💪" },
         { name: "LA Fitness", domain: "lafitness.com", icon: "🏋️" },
@@ -1612,6 +1605,11 @@ const SECTORS = {
         { name: "Club Pilates", domain: "clubpilates.com", icon: "🧘" },
         { name: "Solidcore", domain: "solidcore.co", icon: "🧘" },
       ],
+    }
+  },
+  "Health & Beauty": {
+    icon: "💄",
+    sub: {
       "Beauty / Personal": [
         { name: "Ulta Beauty", domain: "ulta.com", icon: "💄" },
         { name: "Sephora", domain: "sephora.com", icon: "💄" },
@@ -1627,6 +1625,18 @@ const SECTORS = {
         { name: "European Wax Center", domain: "waxcenter.com", icon: "💆" },
         { name: "Drybar", domain: "thedrybar.com", icon: "💇" },
         { name: "Restore Hyper Wellness", domain: "restore.com", icon: "❄️" },
+      ],
+    }
+  },
+  "Health & Medical": {
+    icon: "🏥",
+    sub: {
+      "Pharmacy": [
+        { name: "CVS", domain: "cvs.com", icon: "💊" },
+        { name: "Walgreens", domain: "walgreens.com", icon: "💊" },
+        { name: "Rite Aid", domain: "riteaid.com", icon: "💊" },
+        { name: "Walmart Pharmacy", domain: "walmart.com", icon: "💊" },
+        { name: "Kroger Pharmacy", domain: "kroger.com", icon: "💊" },
       ],
       "Urgent Care / Medical": [
         { name: "AFC Urgent Care", domain: "afcurgentcare.com", icon: "🏥" },
@@ -1901,7 +1911,11 @@ const SECTOR_SEARCH = {
   "QSR / Fast Casual": ["mcdonalds", "burger king", "wendys", "taco bell", "chick fil a", "popeyes", "kfc", "raising canes", "wingstop", "zaxbys", "bojangles", "churchs chicken", "daves hot chicken", "el pollo loco", "pdq restaurant", "slim chickens", "dominos pizza", "pizza hut", "papa johns", "little caesars", "marcos pizza", "jets pizza", "mod pizza", "blaze pizza", "subway", "jimmy johns", "jersey mikes", "firehouse subs", "arbys", "charleys philly steaks", "which wich", "potbelly", "schlotzskys", "mcalister deli", "jason deli", "culvers", "sonic drive in", "whataburger", "jack in the box", "hardees", "carls jr", "steak n shake", "five guys", "shake shack", "smashburger", "freddys frozen custard", "habit burger", "in n out", "white castle", "del taco", "torchys tacos", "panda express", "teriyaki madness", "portillos", "chipotle", "panera bread", "qdoba", "moes southwest grill", "cava restaurant", "sweetgreen", "zoes kitchen", "freshii", "noodles and company", "first watch", "eggs up grill", "corner bakery", "au bon pain", "tropical smoothie", "smoothie king", "jamba juice", "dairy queen", "baskin robbins", "coldstone creamery", "auntie annes", "cinnabon", "wetzels pretzels", "crumbl cookies", "insomnia cookies"],
   "Coffee / Café": ["coffee shop", "starbucks", "dunkin", "cafe bakery", "bagel shop", "dutch bros coffee", "peets coffee", "caribou coffee", "scooters coffee", "7 brew coffee", "black rifle coffee", "black rock coffee", "biggby coffee", "tim hortons", "human bean coffee", "ziggis coffee", "pjs coffee", "gloria jeans coffee", "einstein bagels", "brueggers bagels", "donut shop", "boba tea", "bubble tea"],
   "Auto": ["gas station", "auto parts store", "car wash", "oil change", "tire shop", "auto repair", "autozone", "oreilly auto", "advance auto parts", "napa auto parts", "jiffy lube", "valvoline", "discount tire", "take 5 oil change", "grease monkey", "firestone auto", "midas auto", "meineke", "pep boys", "goodyear auto", "shell gas station", "bp gas station", "chevron", "exxon", "marathon gas", "sunoco", "citgo", "speedway", "circle k", "7-eleven", "sheetz", "wawa", "kwik trip", "caseys general store", "buc-ees", "racetrac", "mister car wash", "zips car wash", "tommys express car wash", "quick quack car wash", "carmax", "carvana"],
-  "Health & Wellness": ["pharmacy", "drugstore", "gym fitness", "urgent care", "hair salon", "nail salon", "dentist", "chiropractor", "physical therapy", "med spa", "massage envy", "cvs pharmacy", "walgreens", "rite aid", "planet fitness", "la fitness", "orangetheory fitness", "anytime fitness", "crunch fitness", "24 hour fitness", "golds gym", "ufc gym", "f45 training", "eos fitness", "lifetime fitness", "ymca", "snap fitness", "pure barre", "club pilates", "great clips", "sport clips", "supercuts", "fantastic sams", "hair cuttery", "hand and stone massage", "european wax center", "restore hyper wellness", "ulta beauty", "sephora", "afc urgent care", "fastmed urgent care"],
+  "Fitness": ["gym fitness", "planet fitness", "la fitness", "orangetheory fitness", "anytime fitness", "crunch fitness", "24 hour fitness", "golds gym", "ufc gym", "f45 training", "eos fitness", "lifetime fitness", "ymca", "snap fitness", "pure barre", "club pilates", "solidcore"],
+  "Health & Beauty": ["hair salon", "nail salon", "med spa", "massage envy", "great clips", "sport clips", "supercuts", "fantastic sams", "hair cuttery", "hand and stone massage", "european wax center", "restore hyper wellness", "ulta beauty", "sephora", "drybar"],
+  "Health & Medical": ["pharmacy", "drugstore", "urgent care", "dentist", "chiropractor", "physical therapy", "cvs pharmacy", "walgreens", "rite aid", "afc urgent care", "fastmed urgent care", "minuteclinic", "nextcare urgent care", "medexpress", "concentra"],
+  "Hospital": ["hospital", "medical center", "emergency room"],
+  "Schools": ["school", "high school", "elementary school", "middle school", "university", "college"],
   "Banking / Finance": ["bank branch", "credit union", "chase bank", "bank of america", "wells fargo", "truist bank", "pnc bank", "regions bank", "td bank", "us bank", "capital one bank", "citizens bank", "fifth third bank", "bmo harris bank", "key bank", "huntington bank", "navy federal credit union"],
   "Telecom": ["cell phone store", "verizon store", "t-mobile store", "at&t store", "cricket wireless", "boost mobile", "metro by t-mobile", "spectrum store", "us cellular", "xfinity store"],
   "Home Improvement": ["home depot", "lowes home improvement", "ace hardware", "true value hardware", "paint store", "floor decor", "tractor supply", "harbor freight", "sherwin williams", "benjamin moore", "menards", "northern tool", "lumber liquidators", "fastenal"],
@@ -1924,7 +1938,11 @@ const CATEGORIES = [
   { id: "QSR / Fast Casual", label: "QSR / Fast Casual" },
   { id: "Coffee / Café", label: "Coffee" },
   { id: "Auto", label: "Auto" },
-  { id: "Health & Wellness", label: "Health" },
+  { id: "Fitness", label: "Fitness" },
+  { id: "Health & Beauty", label: "Beauty" },
+  { id: "Health & Medical", label: "Medical" },
+  { id: "Hospital", label: "Hospital" },
+  { id: "Schools", label: "Schools" },
   { id: "Banking / Finance", label: "Banking" },
   { id: "Telecom", label: "Telecom" },
   { id: "Home Improvement", label: "Home Improv." },
@@ -2655,13 +2673,16 @@ function toggleCategory(catId) {
   let foundCount = 0;
   let pending = queries.length;
 
+  // Landmark categories show all results (no brand filtering)
+  const isLandmark = (catId === 'Hospital' || catId === 'Schools');
+
   function placeResult(r) {
     if (!r.geometry || !r.place_id) return;
     if (seenPlaceIds.has(r.place_id)) return;
     seenPlaceIds.add(r.place_id);
     const matched = lookupBrand(r.name);
-    if (!matched) return; // skip local/unknown businesses — only place known brands
-    const ov = _dropLogoPin(r.geometry.location, r.name, matched.domain);
+    if (!isLandmark && !matched) return; // skip local/unknown for retail categories
+    const ov = _dropLogoPin(r.geometry.location, r.name, matched ? matched.domain : '');
     if (ov) categoryMarkers[catId].push(ov);
     foundCount++;
   }
