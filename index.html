@@ -867,6 +867,44 @@
 
   /* (sector accordion removed — replaced by cat-grid) */
 
+  /* CREATE AERIAL */
+  #aerialCatChecks { display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px; }
+  #aerialCatChecks .ac-item {
+    display:flex; align-items:center; gap:4px; padding:3px 5px;
+    background:rgba(255,255,255,0.04); border-radius:2px; cursor:pointer;
+    font-size:9px; color:var(--text-muted); font-family:'DM Sans',sans-serif;
+    user-select:none; transition:background 0.15s;
+  }
+  #aerialCatChecks .ac-item.on { background:rgba(186,140,54,0.18); color:var(--text-light); }
+  #aerialCatChecks .ac-item .ac-dot {
+    width:6px; height:6px; border-radius:50%;
+    border:1px solid var(--text-muted); flex-shrink:0;
+  }
+  #aerialCatChecks .ac-item.on .ac-dot { background:var(--gold); border-color:var(--gold); }
+  #generateAerialBtn.cancel-mode {
+    background:#662222 !important; color:#ffaaaa !important;
+  }
+  .review-item {
+    display:flex; align-items:center; gap:6px; padding:5px 6px;
+    border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;
+    transition:background 0.15s;
+  }
+  .review-item:hover { background:rgba(255,255,255,0.05); }
+  .review-item .rv-logo { width:24px; height:24px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid var(--border); }
+  .review-item .rv-name { font-size:10px; color:var(--text-light); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .review-item .rv-badge {
+    font-size:8px; padding:1px 5px; border-radius:8px; flex-shrink:0;
+    font-family:'DM Mono',monospace; text-transform:uppercase; letter-spacing:0.05em;
+  }
+  .rv-badge.good { background:rgba(76,175,80,0.2); color:#81c784; }
+  .rv-badge.warn { background:rgba(255,152,0,0.2); color:#ffb74d; }
+  .rv-badge.bad { background:rgba(244,67,54,0.2); color:#ef9a9a; }
+  .lo-pin.flagged { box-shadow:0 0 0 3px rgba(255,152,0,0.7) !important; }
+  .review-summary {
+    font-size:10px; padding:6px; margin-bottom:6px; border-radius:3px;
+    background:rgba(255,255,255,0.04); color:var(--text-light);
+  }
+
   /* MANUAL ADD */
   .manual-add-section {
     padding: 10px 14px 12px;
@@ -989,6 +1027,55 @@
 
     <!-- SCROLLABLE AREA -->
     <div class="sidebar-scroll">
+
+      <!-- CREATE AERIAL -->
+      <div class="sidebar-section">
+        <div class="section-label collapsible" onclick="toggleSection(this)">Create Aerial</div>
+        <div class="section-body">
+          <!-- Aerial Type -->
+          <div style="margin-bottom:8px;">
+            <div style="font-size:9px;color:var(--text-muted);font-family:'DM Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Aerial Type</div>
+            <div class="map-type-row">
+              <button class="map-type-btn active" id="aerial-low" onclick="selectAerialType('low')">Low Aerial</button>
+              <button class="map-type-btn" id="aerial-high" onclick="selectAerialType('high')">High Aerial</button>
+            </div>
+          </div>
+          <!-- Radius (high aerial only) -->
+          <div id="aerialRadiusRow" style="margin-bottom:8px;display:none;">
+            <div style="font-size:9px;color:var(--text-muted);font-family:'DM Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Search Radius</div>
+            <div class="map-type-row">
+              <button class="map-type-btn active" id="ar-1" onclick="selectAerialRadius(1)">1 mi</button>
+              <button class="map-type-btn" id="ar-1.5" onclick="selectAerialRadius(1.5)">1.5 mi</button>
+              <button class="map-type-btn" id="ar-3" onclick="selectAerialRadius(3)">3 mi</button>
+            </div>
+          </div>
+          <!-- Categories -->
+          <div style="margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span style="font-size:9px;color:var(--text-muted);font-family:'DM Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;">Categories</span>
+              <button class="btn" style="font-size:8px;padding:1px 5px;color:var(--text-muted);border:1px solid var(--border);" onclick="toggleAllAerialCats()">All / None</button>
+            </div>
+            <div id="aerialCatChecks"></div>
+          </div>
+          <!-- Progress -->
+          <div id="aerialProgress" style="display:none;margin-bottom:8px;">
+            <div style="font-size:10px;color:var(--text-light);margin-bottom:3px;" id="aerialProgressLabel">Searching...</div>
+            <div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">
+              <div id="aerialProgressBar" style="height:100%;background:var(--gold);width:0%;transition:width 0.3s;border-radius:2px;"></div>
+            </div>
+            <div style="font-size:9px;color:var(--text-muted);margin-top:3px;" id="aerialProgressDetail"></div>
+          </div>
+          <!-- Generate Button -->
+          <button class="btn btn-gold" style="width:100%;padding:8px;font-size:11px;" id="generateAerialBtn" onclick="generateAerial()">Generate Aerial</button>
+          <!-- AI Review Button -->
+          <button class="btn" style="width:100%;padding:7px;font-size:10px;margin-top:6px;border:1px solid var(--border);color:var(--text-light);" id="reviewLogosBtn" onclick="reviewLogos()">AI Review Logos</button>
+          <!-- Review Results Panel -->
+          <div id="reviewPanel" style="display:none;margin-top:8px;max-height:200px;overflow-y:auto;">
+            <div style="font-size:9px;color:var(--text-muted);font-family:'DM Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Review Results</div>
+            <div id="reviewResults"></div>
+          </div>
+        </div>
+      </div>
 
       <!-- SAVED MAPS -->
       <div class="sidebar-section">
@@ -1971,6 +2058,13 @@ let _activeMapId = null; // currently loaded/saved map ID for autosave
 let _activeMapName = null;
 let _autosaveTimer = null;
 
+// ─── CREATE AERIAL STATE ────────────────────────────────────────────────────
+let _aerialType = 'low';
+let _aerialRadius = 1;
+let _aerialRunning = false;
+let _aerialAbort = false;
+let _aerialSelectedCats = null; // initialized after CATEGORIES is defined
+
 function _setActiveMap(id, name) {
   _activeMapId = id;
   _activeMapName = name || '';
@@ -2053,6 +2147,7 @@ const GMAPS_API_KEY = 'AIzaSyADpereQzvBuQoubmpzQOVVIndA7OweDaA';
 
 window.addEventListener('DOMContentLoaded', () => {
   populateCategories();
+  populateAerialCategories();
   brandLookup = buildBrandLookup();
   document.getElementById('keyScreen').style.display = 'none';
   loadGoogleMaps(GMAPS_API_KEY);
@@ -2089,10 +2184,13 @@ function initMap() {
       const sn = this._name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const initial = this._name.charAt(0).toUpperCase();
       const hue = Math.abs(this._name.split('').reduce((h,c)=>h+c.charCodeAt(0),0)) % 360;
+      this._logoStatus = 'initial'; // track: 'good', 'favicon', 'initial'
 
       // Check for uploaded logo first
       const uploaded = getUploadedLogo(this._logoKey);
+      if (uploaded) this._logoStatus = 'good';
 
+      const self = this;
       el.innerHTML = `<div class="lo-pin">
         ${uploaded
           ? `<img src="${uploaded}" class="lo-pin-img">`
@@ -2182,6 +2280,21 @@ function initMap() {
       });
       this._pin = pin;
       this._el = el;
+
+      // Track logo load status for AI review
+      const img = el.querySelector('.lo-pin-img');
+      if (img && !uploaded) {
+        img.addEventListener('load', () => {
+          if (img.src.includes('logo.dev')) self._logoStatus = 'good';
+          else if (img.src.includes('favicons')) self._logoStatus = 'favicon';
+        }, { once: false });
+        const origOnerror = img.onerror;
+        img.addEventListener('error', () => {
+          if (img.src.includes('favicons')) self._logoStatus = 'initial';
+          else if (img.src.includes('logo.dev')) self._logoStatus = 'favicon';
+        }, { once: false });
+      }
+
       this.getPanes().overlayMouseTarget.appendChild(el);
     }
     _getResizeTargets() {
@@ -2637,6 +2750,293 @@ function populateCategories() {
     btn.addEventListener('click', () => toggleCategory(cat.id));
     grid.appendChild(btn);
   });
+}
+
+// ─── CREATE AERIAL UI ────────────────────────────────────────────────────────
+function populateAerialCategories() {
+  _aerialSelectedCats = new Set(CATEGORIES.map(c => c.id));
+  const grid = document.getElementById('aerialCatChecks');
+  if (!grid) return;
+  grid.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const item = document.createElement('div');
+    item.className = 'ac-item on';
+    item.dataset.catId = cat.id;
+    item.innerHTML = `<span class="ac-dot"></span>${cat.label}`;
+    item.addEventListener('click', () => {
+      item.classList.toggle('on');
+      if (item.classList.contains('on')) _aerialSelectedCats.add(cat.id);
+      else _aerialSelectedCats.delete(cat.id);
+    });
+    grid.appendChild(item);
+  });
+}
+
+function toggleAllAerialCats() {
+  const grid = document.getElementById('aerialCatChecks');
+  const allOn = _aerialSelectedCats.size === CATEGORIES.length;
+  grid.querySelectorAll('.ac-item').forEach(item => {
+    if (allOn) { item.classList.remove('on'); _aerialSelectedCats.delete(item.dataset.catId); }
+    else { item.classList.add('on'); _aerialSelectedCats.add(item.dataset.catId); }
+  });
+}
+
+function selectAerialType(type) {
+  _aerialType = type;
+  document.getElementById('aerial-low').classList.toggle('active', type === 'low');
+  document.getElementById('aerial-high').classList.toggle('active', type === 'high');
+  document.getElementById('aerialRadiusRow').style.display = type === 'high' ? '' : 'none';
+}
+
+function selectAerialRadius(miles) {
+  _aerialRadius = miles;
+  ['1', '1.5', '3'].forEach(r => {
+    const btn = document.getElementById('ar-' + r);
+    if (btn) btn.classList.toggle('active', parseFloat(r) === miles);
+  });
+}
+
+// ─── GENERATE AERIAL ─────────────────────────────────────────────────────────
+async function generateAerial() {
+  if (_aerialRunning) { _aerialAbort = true; return; }
+
+  const center = subjectLocation || (map ? map.getCenter() : null);
+  if (!center) { setStatus('Search a property address first'); return; }
+  if (!subjectLocation && !confirm('No subject property set. Use current map center?')) return;
+  if (_aerialSelectedCats.size === 0) { setStatus('Select at least one category'); return; }
+
+  // Determine radius & zoom
+  const radiusMiles = _aerialType === 'low' ? 0.75 : _aerialRadius;
+  const radiusMeters = radiusMiles * 1609.34;
+  const zoomLevel = _aerialType === 'low' ? 16 : (_aerialRadius >= 3 ? 14 : 15);
+  map.setCenter(center);
+  map.setZoom(zoomLevel);
+
+  // Show radius circle if not already visible
+  const closestRadius = [0.5, 1, 1.5, 3, 5, 10].find(r => r >= radiusMiles) || radiusMiles;
+  if (!radiiCircles[closestRadius]) {
+    const togEl = document.getElementById('tog-r' + closestRadius);
+    if (togEl && !togEl.classList.contains('on')) toggleRadius(closestRadius);
+  }
+
+  // UI setup
+  _aerialRunning = true;
+  _aerialAbort = false;
+  const btn = document.getElementById('generateAerialBtn');
+  btn.textContent = 'Cancel';
+  btn.classList.add('cancel-mode');
+  const progressDiv = document.getElementById('aerialProgress');
+  const progressBar = document.getElementById('aerialProgressBar');
+  const progressLabel = document.getElementById('aerialProgressLabel');
+  const progressDetail = document.getElementById('aerialProgressDetail');
+  progressDiv.style.display = '';
+  progressBar.style.width = '0%';
+
+  const catsToSearch = CATEGORIES.filter(c => _aerialSelectedCats.has(c.id));
+  const totalCats = catsToSearch.length;
+  let completedCats = 0, totalFound = 0;
+
+  // Global dedup
+  const seenPlaceIds = new Set();
+  const seenDomainLocs = new Map(); // domain -> [LatLng, ...]
+
+  const service = new google.maps.places.PlacesService(map);
+
+  function withinRadius(loc) {
+    return google.maps.geometry.spherical.computeDistanceBetween(center, loc) <= radiusMeters;
+  }
+  function isDupDomain(domain, loc) {
+    if (!domain) return false;
+    const locs = seenDomainLocs.get(domain);
+    if (!locs) return false;
+    return locs.some(l => google.maps.geometry.spherical.computeDistanceBetween(l, loc) < 200);
+  }
+  function trackDomain(domain, loc) {
+    if (!domain) return;
+    if (!seenDomainLocs.has(domain)) seenDomainLocs.set(domain, []);
+    seenDomainLocs.get(domain).push(loc);
+  }
+
+  // Search one category
+  function searchCat(cat) {
+    return new Promise(resolve => {
+      const catId = cat.id;
+      const queries = SECTOR_SEARCH[catId];
+      if (!queries || !queries.length) { resolve(0); return; }
+      const isLandmark = catId === 'Hospital' || catId === 'Schools';
+      categoryMarkers[catId] = categoryMarkers[catId] || [];
+      let catFound = 0;
+
+      function runQuery(q) {
+        return new Promise(qResolve => {
+          if (_aerialAbort) { qResolve(); return; }
+          function handlePage(results, status, pagination) {
+            if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+              results.forEach(r => {
+                if (!r.geometry || !r.place_id) return;
+                if (seenPlaceIds.has(r.place_id)) return;
+                if (!withinRadius(r.geometry.location)) return;
+                const matched = lookupBrand(r.name);
+                if (!isLandmark && !matched) return;
+                const domain = matched ? matched.domain : '';
+                if (isDupDomain(domain, r.geometry.location)) return;
+                seenPlaceIds.add(r.place_id);
+                trackDomain(domain, r.geometry.location);
+                const ov = _dropLogoPin(r.geometry.location, r.name, domain);
+                if (ov) { categoryMarkers[catId].push(ov); catFound++; }
+              });
+            }
+            if (pagination && pagination.hasNextPage && !_aerialAbort) {
+              setTimeout(() => pagination.nextPage(), 500);
+            } else { qResolve(); }
+          }
+          service.textSearch({ query: q, location: center, radius: radiusMeters }, handlePage);
+        });
+      }
+
+      // Batch queries 3 at a time, 350ms between batches
+      const BATCH = 3, DELAY = 350;
+      let idx = 0;
+      async function nextBatch() {
+        if (idx >= queries.length || _aerialAbort) {
+          const catBtn = document.querySelector(`.cat-btn[data-cat-id="${catId}"]`);
+          if (catBtn) { catBtn.classList.add('active'); catBtn.querySelector('.cat-count').textContent = catFound || ''; }
+          resolve(catFound);
+          return;
+        }
+        const batch = queries.slice(idx, idx + BATCH);
+        idx += BATCH;
+        await Promise.all(batch.map(runQuery));
+        if (idx < queries.length && !_aerialAbort) setTimeout(nextBatch, DELAY);
+        else {
+          const catBtn = document.querySelector(`.cat-btn[data-cat-id="${catId}"]`);
+          if (catBtn) { catBtn.classList.add('active'); catBtn.querySelector('.cat-count').textContent = catFound || ''; }
+          resolve(catFound);
+        }
+      }
+      nextBatch();
+    });
+  }
+
+  // Process categories sequentially
+  for (const cat of catsToSearch) {
+    if (_aerialAbort) break;
+    progressLabel.textContent = `Searching ${cat.label}...`;
+    progressDetail.textContent = `${completedCats + 1} of ${totalCats} categories · ${totalFound} found`;
+    progressBar.style.width = `${(completedCats / totalCats) * 100}%`;
+    const found = await searchCat(cat);
+    totalFound += found;
+    completedCats++;
+  }
+
+  // Done
+  progressBar.style.width = '100%';
+  if (_aerialAbort) {
+    progressLabel.textContent = 'Cancelled';
+    setStatus(`Cancelled — ${totalFound} logos placed`);
+  } else {
+    progressLabel.textContent = `Done — ${totalFound} retailers found`;
+    progressDetail.textContent = `${completedCats} categories · ${radiusMiles} mi radius`;
+    setStatus(`Aerial complete: ${totalFound} logos within ${radiusMiles} mi`);
+  }
+  _aerialRunning = false;
+  _aerialAbort = false;
+  btn.textContent = 'Generate Aerial';
+  btn.classList.remove('cancel-mode');
+  setTimeout(() => { if (!_aerialRunning) progressDiv.style.display = 'none'; }, 4000);
+}
+
+// ─── AI LOGO REVIEW ──────────────────────────────────────────────────────────
+function reviewLogos() {
+  const panel = document.getElementById('reviewPanel');
+  const results = document.getElementById('reviewResults');
+  if (!placedMarkers.length) { setStatus('No logos to review'); return; }
+
+  panel.style.display = '';
+  results.innerHTML = '<div style="font-size:10px;color:var(--text-muted);padding:8px;">Reviewing logos...</div>';
+
+  // Clear previous flags
+  document.querySelectorAll('.lo-pin.flagged').forEach(p => p.classList.remove('flagged'));
+
+  // Wait a moment for any pending image loads to settle
+  setTimeout(() => {
+    let good = 0, favicon = 0, bad = 0;
+    const items = [];
+
+    // Also do a live check on each overlay's actual image state
+    placedMarkers.forEach(ov => {
+      if (!ov._el || !ov.getMap()) return;
+      const img = ov._el.querySelector('.lo-pin-img');
+      const init = ov._el.querySelector('.lo-pin-initial');
+
+      // Determine actual status by checking DOM state
+      let status = ov._logoStatus || 'initial';
+      if (img && img.style.display !== 'none' && img.naturalWidth > 0) {
+        if (img.src.includes('logo.dev')) status = 'good';
+        else if (img.src.includes('favicons')) status = 'favicon';
+      } else if (init && init.style.display !== 'none') {
+        status = 'initial';
+      }
+      ov._logoStatus = status;
+
+      if (status === 'good') good++;
+      else if (status === 'favicon') { favicon++; ov._pin?.classList.add('flagged'); }
+      else { bad++; ov._pin?.classList.add('flagged'); }
+
+      items.push({ ov, status, name: ov._name, domain: ov._domain });
+    });
+
+    // Sort: bad first, then favicon, then good
+    const order = { initial: 0, favicon: 1, good: 2 };
+    items.sort((a, b) => order[a.status] - order[b.status]);
+
+    // Build summary
+    let html = `<div class="review-summary">`;
+    html += `<span style="color:#81c784;">${good} good</span>`;
+    if (favicon) html += ` · <span style="color:#ffb74d;">${favicon} low quality</span>`;
+    if (bad) html += ` · <span style="color:#ef9a9a;">${bad} missing</span>`;
+    html += `</div>`;
+
+    // Build item list (only show non-good logos)
+    const flagged = items.filter(i => i.status !== 'good');
+    if (flagged.length === 0) {
+      html += '<div style="font-size:10px;color:#81c784;padding:6px;">All logos verified!</div>';
+    } else {
+      flagged.forEach((item, idx) => {
+        const badgeClass = item.status === 'initial' ? 'bad' : 'warn';
+        const badgeText = item.status === 'initial' ? 'missing' : 'low-res';
+        const imgSrc = item.domain
+          ? `https://img.logo.dev/${item.domain}?token=pk_LLZPmSyxQnKo_8UpB07OVA&size=64`
+          : '';
+        html += `<div class="review-item" data-rv-idx="${idx}" onclick="reviewJumpTo(${idx})">
+          ${imgSrc ? `<img class="rv-logo" src="${imgSrc}" onerror="this.style.display='none'">` : ''}
+          <span class="rv-name" title="${item.name}">${item.name}</span>
+          <span class="rv-badge ${badgeClass}">${badgeText}</span>
+        </div>`;
+      });
+    }
+
+    results.innerHTML = html;
+
+    // Store flagged items for jump-to
+    window._reviewFlagged = flagged;
+
+    setStatus(`Review: ${good} good, ${favicon} low quality, ${bad} missing`);
+  }, 1500);
+}
+
+function reviewJumpTo(idx) {
+  const item = window._reviewFlagged?.[idx];
+  if (!item || !item.ov || !item.ov.getMap()) return;
+  const pos = item.ov._pos || item.ov._anchorPos;
+  map.panTo(pos);
+  if (map.getZoom() < 17) map.setZoom(17);
+  // Flash the pin
+  if (item.ov._pin) {
+    item.ov._pin.style.transition = 'box-shadow 0.2s';
+    item.ov._pin.style.boxShadow = '0 0 0 4px rgba(255,215,0,0.8)';
+    setTimeout(() => { item.ov._pin.style.boxShadow = ''; }, 1500);
+  }
 }
 
 function toggleCategory(catId) {
