@@ -2251,7 +2251,15 @@ function initMap() {
         this._pos = proj.fromDivPixelToLatLng(new google.maps.Point(pt.x+e.clientX-sx, pt.y+e.clientY-sy));
         this.draw();
       };
-      const onUp = () => { dragging=false; resizing=false; };
+      const onUp = () => {
+        if (dragging) {
+          this._anchorPos = this._pos;
+          this._dot.setPosition(this._pos);
+          this._line.setMap(null);
+          this._dot.setMap(null);
+        }
+        dragging=false; resizing=false;
+      };
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
 
@@ -2894,39 +2902,26 @@ async function generateAerial() {
         });
       }
 
-      // Batch queries 3 at a time, 350ms between batches
-      const BATCH = 3, DELAY = 350;
-      let idx = 0;
-      async function nextBatch() {
-        if (idx >= queries.length || _aerialAbort) {
-          const catBtn = document.querySelector(`.cat-btn[data-cat-id="${catId}"]`);
-          if (catBtn) { catBtn.classList.add('active'); catBtn.querySelector('.cat-count').textContent = catFound || ''; }
-          resolve(catFound);
-          return;
-        }
-        const batch = queries.slice(idx, idx + BATCH);
-        idx += BATCH;
-        await Promise.all(batch.map(runQuery));
-        if (idx < queries.length && !_aerialAbort) setTimeout(nextBatch, DELAY);
-        else {
-          const catBtn = document.querySelector(`.cat-btn[data-cat-id="${catId}"]`);
-          if (catBtn) { catBtn.classList.add('active'); catBtn.querySelector('.cat-count').textContent = catFound || ''; }
-          resolve(catFound);
-        }
-      }
-      nextBatch();
+      // Fire all queries in parallel (same as toggleCategory)
+      Promise.all(queries.map(runQuery)).then(() => {
+        const catBtn = document.querySelector(`.cat-btn[data-cat-id="${catId}"]`);
+        if (catBtn) { catBtn.classList.add('active'); catBtn.querySelector('.cat-count').textContent = catFound || ''; }
+        resolve(catFound);
+      });
     });
   }
 
-  // Process categories sequentially
-  for (const cat of catsToSearch) {
+  // Process categories in parallel batches of 4
+  const CAT_BATCH = 4;
+  for (let i = 0; i < catsToSearch.length; i += CAT_BATCH) {
     if (_aerialAbort) break;
-    progressLabel.textContent = `Searching ${cat.label}...`;
-    progressDetail.textContent = `${completedCats + 1} of ${totalCats} categories · ${totalFound} found`;
-    progressBar.style.width = `${(completedCats / totalCats) * 100}%`;
-    const found = await searchCat(cat);
-    totalFound += found;
-    completedCats++;
+    const batch = catsToSearch.slice(i, i + CAT_BATCH);
+    progressLabel.textContent = `Searching ${batch.map(c => c.label).join(', ')}...`;
+    progressDetail.textContent = `${Math.min(i + CAT_BATCH, totalCats)} of ${totalCats} categories · ${totalFound} found`;
+    progressBar.style.width = `${(i / totalCats) * 100}%`;
+    const results = await Promise.all(batch.map(searchCat));
+    results.forEach(f => totalFound += f);
+    completedCats += batch.length;
   }
 
   // Done
