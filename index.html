@@ -783,7 +783,7 @@
   /* ── Logo Group ─────────────────────────────────────────────────── */
   .logo-group-wrap { position: absolute; z-index: 12; pointer-events: auto; }
   .logo-group-box {
-    background: rgba(0,0,0,0.45);
+    background: rgba(220,220,220,0.85);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     border-radius: 8px;
@@ -791,8 +791,8 @@
     display: grid;
     grid-template-columns: repeat(3, 28px);
     gap: 4px;
-    cursor: pointer;
-    border: 1px solid rgba(255,255,255,0.12);
+    cursor: grab;
+    border: 1px solid rgba(0,0,0,0.12);
     transition: transform 0.15s, box-shadow 0.15s;
   }
   .logo-group-box:hover { transform: scale(1.06); box-shadow: 0 2px 12px rgba(0,0,0,0.5); }
@@ -800,8 +800,8 @@
     width: 28px; height: 28px;
     border-radius: 50%;
     object-fit: cover;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(0,0,0,0.15);
   }
   .logo-group-box .group-initial {
     width: 28px; height: 28px;
@@ -811,7 +811,7 @@
   }
   .logo-group-count {
     grid-column: 1 / -1;
-    font-size: 9px; color: rgba(255,255,255,0.6);
+    font-size: 9px; color: rgba(0,0,0,0.55);
     text-align: center; padding-top: 2px;
     font-family: 'DM Sans', sans-serif;
     letter-spacing: 0.04em;
@@ -2448,6 +2448,9 @@ function initMap() {
       }
       if (initial) initial.style.display = 'none';
     }
+    // Hide/show without destroying — used by groups
+    _hide() { if (this._el) this._el.style.display = 'none'; if (this._line) this._line.setMap(null); if (this._dot) this._dot.setMap(null); }
+    _show() { if (this._el) this._el.style.display = ''; this.draw(); }
     onRemove() {
       if (this._el) { this._el.parentNode && this._el.parentNode.removeChild(this._el); this._el=null; }
       if (this._line) { this._line.setMap(null); this._line=null; }
@@ -2456,7 +2459,6 @@ function initMap() {
       logoCount = Math.max(0, logoCount-1);
       const lc = document.getElementById('logoCount');
       if (lc) lc.textContent = logoCount;
-      // Remove from group if grouped
       if (this._group) this._group.removeOverlay(this);
     }
   };
@@ -2466,6 +2468,7 @@ function initMap() {
     constructor(anchorPos, overlays) {
       super();
       this._anchorPos = anchorPos;
+      this._pos = anchorPos; // display position (draggable, separate from anchor)
       this._overlays = [...overlays];
       this._expanded = false;
       this._el = null;
@@ -2479,10 +2482,48 @@ function initMap() {
       this._el = el;
       this._buildGroupBox();
 
+      // Leader line + anchor dot
+      this._line = new google.maps.Polyline({
+        path: [this._anchorPos, this._anchorPos],
+        strokeColor: '#cba040', strokeWeight: 1.5, strokeOpacity: 0.6, map: null
+      });
+      this._dot = new google.maps.Marker({
+        position: this._anchorPos,
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#cba040', fillOpacity: 0.85, strokeColor: '#fff', strokeWeight: 1.5 },
+        map: this.getMap() || map
+      });
+
+      // Click to expand (only if not dragged)
       el.addEventListener('click', e => {
         e.stopPropagation();
-        if (!this._expanded) this.expand();
+        if (!this._expanded && !this._justDragged) this.expand();
+        this._justDragged = false;
       });
+
+      // Drag logic
+      let dragging = false, sx, sy, sp, moved;
+      el.addEventListener('mousedown', e => {
+        if (this._expanded) return;
+        dragging = true; moved = false;
+        sx = e.clientX; sy = e.clientY; sp = this._pos;
+        e.preventDefault(); e.stopPropagation();
+      });
+      const onMove = e => {
+        if (!dragging) return;
+        const dx = e.clientX - sx, dy = e.clientY - sy;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+        const proj = this.getProjection();
+        if (!proj) return;
+        const pt = proj.fromLatLngToDivPixel(sp);
+        this._pos = proj.fromDivPixelToLatLng(new google.maps.Point(pt.x + dx, pt.y + dy));
+        this.draw();
+      };
+      const onUp = () => {
+        if (dragging) this._justDragged = moved;
+        dragging = false;
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
 
       this.getPanes().overlayMouseTarget.appendChild(el);
     }
@@ -2544,12 +2585,27 @@ function initMap() {
     draw() {
       const proj = this.getProjection();
       if (!proj || !this._el) return;
-      const pt = proj.fromLatLngToDivPixel(this._anchorPos);
+      const pt = proj.fromLatLngToDivPixel(this._pos);
       if (!pt) return;
-      // Position box above anchor
+      // Position box above display position
       this._el.style.left = (pt.x) + 'px';
       this._el.style.top = (pt.y - 20) + 'px';
       this._el.style.transform = 'translate(-50%, -100%)';
+
+      // Leader line from box to anchor dot
+      const anchorPt = proj.fromLatLngToDivPixel(this._anchorPos);
+      if (pt && anchorPt && this._line && this._dot) {
+        const dx = pt.x - anchorPt.x, dy = pt.y - anchorPt.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 20) {
+          this._line.setPath([this._anchorPos, this._pos]);
+          this._line.setMap(this.getMap() || map);
+          this._dot.setMap(this.getMap() || map);
+        } else {
+          this._line.setMap(null);
+          this._dot.setMap(null);
+        }
+      }
     }
 
     expand() {
@@ -2570,11 +2626,8 @@ function initMap() {
         const angle = (2 * Math.PI * i / n) - Math.PI / 2;
         const r = Math.max(50, 30 + n * 10);
         const px = new google.maps.Point(center.x + Math.cos(angle) * r, center.y + Math.sin(angle) * r);
-        const newPos = proj.fromDivPixelToLatLng(px);
-        ov._pos = newPos;
-        // Keep original anchor so leader line draws
-        ov.setMap(map);
-        ov.draw();
+        ov._pos = proj.fromDivPixelToLatLng(px);
+        ov._show();
       });
 
       // Add collapse button
@@ -2606,11 +2659,10 @@ function initMap() {
         this._mapClickListener = null;
       }
 
-      // Hide individual overlays (remove from map)
+      // Hide individual overlays via CSS (keeps them alive)
       this._overlays.forEach(ov => {
         ov._pos = ov._anchorPos;
-        ov.setMap(null);
-        // Don't remove from placedMarkers — they're still "placed", just grouped
+        ov._hide();
       });
 
       // Rebuild and show group box
@@ -2649,8 +2701,7 @@ function initMap() {
       this._overlays.forEach(ov => {
         ov._group = null;
         ov._pos = ov._anchorPos;
-        ov.setMap(map);
-        ov.draw();
+        ov._show();
       });
       // Remove this group from the tracking array and map
       logoGroups = logoGroups.filter(g => g !== this);
@@ -2662,6 +2713,8 @@ function initMap() {
         google.maps.event.removeListener(this._mapClickListener);
         this._mapClickListener = null;
       }
+      if (this._line) { this._line.setMap(null); this._line = null; }
+      if (this._dot) { this._dot.setMap(null); this._dot = null; }
       if (this._el && this._el.parentNode) {
         this._el.parentNode.removeChild(this._el);
       }
@@ -3243,6 +3296,7 @@ async function generateAerial() {
     progressLabel.textContent = `Done — ${totalFound} retailers found`;
     progressDetail.textContent = `${completedCats} categories · ${radiusMiles} mi radius`;
     setStatus(`Aerial complete: ${totalFound} logos within ${radiusMiles} mi`);
+    _sweepDuplicateLogos();
   }
   _aerialRunning = false;
   _aerialAbort = false;
@@ -3413,6 +3467,7 @@ function toggleCategory(catId) {
     setStatus(foundCount > 0
       ? `${foundCount} ${catId} location(s) within ${maxRadiusMiles} mi`
       : `No ${catId} found within ${maxRadiusMiles} mi`);
+    _sweepDuplicateLogos();
   }
 
   queries.forEach(q => {
@@ -3519,59 +3574,9 @@ function _dropLogoPin(latLng, name, domain) {
   placedMarkers.push(overlay);
   logoCount++;
   document.getElementById('logoCount').textContent = logoCount;
-  _tryAutoGroup(overlay);
   return overlay;
 }
 
-// Auto-group: if a newly placed logo is near an existing one, group them
-function _tryAutoGroup(newOv) {
-  if (!_LogoGroup || !map) return;
-  const proj = map.getProjection();
-  if (!proj) return;
-  const THRESHOLD = 30; // pixels
-
-  const newAnchor = newOv._anchorPos;
-  const newPt = proj.fromLatLngToPoint(newAnchor);
-
-  const zoom = map.getZoom();
-  const scale = Math.pow(2, zoom);
-
-  for (let i = 0; i < placedMarkers.length; i++) {
-    const ov = placedMarkers[i];
-    if (ov === newOv || !ov.getMap()) continue;
-
-    const ovPt = proj.fromLatLngToPoint(ov._anchorPos);
-    const dx = (newPt.x - ovPt.x) * scale;
-    const dy = (newPt.y - ovPt.y) * scale;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    if (dist < THRESHOLD) {
-      if (ov._group) {
-        // Add to existing group
-        ov._group.addOverlay(newOv);
-        newOv.setMap(null);
-      } else {
-        // Create new group with both
-        _createGroup([ov, newOv]);
-      }
-      return;
-    }
-  }
-
-  // Also check against existing group anchors
-  for (let i = 0; i < logoGroups.length; i++) {
-    const g = logoGroups[i];
-    const gPt = proj.fromLatLngToPoint(g._anchorPos);
-    const dx = (newPt.x - gPt.x) * scale;
-    const dy = (newPt.y - gPt.y) * scale;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < THRESHOLD) {
-      g.addOverlay(newOv);
-      newOv.setMap(null);
-      return;
-    }
-  }
-}
 
 function _createGroup(overlays) {
   if (!_LogoGroup || overlays.length < 2) return null;
@@ -3588,8 +3593,8 @@ function _createGroup(overlays) {
   group.setMap(map);
   logoGroups.push(group);
 
-  // Hide individual overlays
-  overlays.forEach(ov => ov.setMap(null));
+  // Hide individual overlays via CSS (keeps them alive)
+  overlays.forEach(ov => ov._hide());
 
   return group;
 }
@@ -3599,8 +3604,7 @@ function _ungroupAll() {
     g._overlays.forEach(ov => {
       ov._group = null;
       ov._pos = ov._anchorPos;
-      ov.setMap(map);
-      ov.draw();
+      ov._show();
     });
     g.setMap(null);
   });
@@ -3660,6 +3664,61 @@ function _ungroupSelected() {
   setStatus('Ungrouped');
 }
 
+// ─── SWEEP DUPLICATE LOGOS ──────────────────────────────────────────────────
+function _sweepDuplicateLogos() {
+  if (!map) return;
+  const proj = map.getProjection();
+  if (!proj) return;
+  const zoom = map.getZoom();
+  const scale = Math.pow(2, zoom);
+  const DIST_PX = 40; // same brand within 40px = duplicate
+  const kept = [];
+  const removed = [];
+
+  for (let i = 0; i < placedMarkers.length; i++) {
+    const ov = placedMarkers[i];
+    if (!ov.getMap() && !ov._group) continue; // already removed or hidden but not grouped
+    const key = ov._logoKey || ov._name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    let isDup = false;
+
+    for (let j = 0; j < kept.length; j++) {
+      const k = kept[j];
+      const kKey = k._logoKey || k._name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (key !== kKey) continue;
+      // Same brand — check proximity
+      const p1 = proj.fromLatLngToPoint(ov._anchorPos);
+      const p2 = proj.fromLatLngToPoint(k._anchorPos);
+      const dx = (p1.x - p2.x) * scale;
+      const dy = (p1.y - p2.y) * scale;
+      if (Math.sqrt(dx * dx + dy * dy) < DIST_PX) {
+        isDup = true;
+        break;
+      }
+    }
+
+    if (isDup) {
+      if (ov._group) ov._group.removeOverlay(ov);
+      ov.setMap(null);
+      removed.push(ov);
+    } else {
+      kept.push(ov);
+    }
+  }
+
+  // Clean up category marker refs
+  if (removed.length > 0) {
+    const removedSet = new Set(removed);
+    Object.keys(categoryMarkers).forEach(catId => {
+      categoryMarkers[catId] = categoryMarkers[catId].filter(ov => !removedSet.has(ov));
+      const btn = document.querySelector(`.cat-btn[data-cat-id="${catId}"]`);
+      if (btn) btn.querySelector('.cat-count').textContent = categoryMarkers[catId].length || '';
+    });
+    setStatus(`Removed ${removed.length} duplicate logo(s)`);
+  } else {
+    setStatus('No duplicates found');
+  }
+}
+
 // ─── LOGO UPLOAD ────────────────────────────────────────────────────────────
 function getUploadedLogo(key) {
   try {
@@ -3716,9 +3775,9 @@ function handleLogoUpload(e) {
 }
 
 function clearMarkers() {
-  // Clear groups first to avoid group removal side effects
+  // Clear groups first — show hidden overlays so setMap(null) can clean them up
   logoGroups.forEach(g => {
-    g._overlays.forEach(ov => { ov._group = null; });
+    g._overlays.forEach(ov => { ov._group = null; ov._show && ov._show(); });
     g.setMap(null);
   });
   logoGroups = [];
@@ -4152,13 +4211,15 @@ function _captureMapState() {
       if (!g.getMap()) return;
       const aLat = _rd(typeof g._anchorPos.lat === 'function' ? g._anchorPos.lat() : g._anchorPos.lat);
       const aLng = _rd(typeof g._anchorPos.lng === 'function' ? g._anchorPos.lng() : g._anchorPos.lng);
+      const pLat = _rd(typeof g._pos.lat === 'function' ? g._pos.lat() : g._pos.lat);
+      const pLng = _rd(typeof g._pos.lng === 'function' ? g._pos.lng() : g._pos.lng);
       const indices = [];
       g._overlays.forEach(ov => {
         const idx = placedMarkers.indexOf(ov);
         if (idx >= 0) indices.push(idx);
       });
       if (indices.length >= 2) {
-        state.groups.push({ anchor: { lat: aLat, lng: aLng }, logoIndices: indices });
+        state.groups.push({ anchor: { lat: aLat, lng: aLng }, pos: { lat: pLat, lng: pLng }, logoIndices: indices });
       }
     } catch (e) { /* skip broken group */ }
   });
@@ -4253,9 +4314,10 @@ function _restoreMapState(state) {
         if (overlays.length >= 2) {
           const anchor = new google.maps.LatLng(g.anchor.lat, g.anchor.lng);
           const group = new _LogoGroup(anchor, overlays);
+          if (g.pos) group._pos = new google.maps.LatLng(g.pos.lat, g.pos.lng);
           group.setMap(map);
           logoGroups.push(group);
-          overlays.forEach(ov => ov.setMap(null));
+          overlays.forEach(ov => ov._hide());
         }
       } catch (e) { /* skip broken group */ }
     });
