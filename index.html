@@ -774,10 +774,8 @@
     background: transparent;
     border: none;
     box-shadow: none;
-    border-radius: 0;
   }
   .lo-pin.no-bg .lo-pin-img {
-    border-radius: 0;
     width: 40px; height: 40px;
     object-fit: contain;
   }
@@ -2195,8 +2193,8 @@ function initMap() {
         ${uploaded
           ? `<img src="${uploaded}" class="lo-pin-img">`
           : this._domain
-            ? `<img src="https://img.logo.dev/${this._domain}?token=pk_LLZPmSyxQnKo_8UpB07OVA&size=64" class="lo-pin-img"
-                onerror="this.onerror=function(){this.parentNode.querySelector('.lo-pin-initial').style.display='flex';this.style.display='none';};this.src='https://www.google.com/s2/favicons?sz=64&domain=${this._domain}';">`
+            ? `<img src="https://img.logo.dev/${this._domain}?token=pk_LLZPmSyxQnKo_8UpB07OVA&size=200&format=png" class="lo-pin-img"
+                onerror="this.onerror=function(){this.parentNode.querySelector('.lo-pin-initial').style.display='flex';this.style.display='none';};this.src='https://www.google.com/s2/favicons?sz=128&domain=${this._domain}';">`
             : `<span class="lo-pin-initial" style="background:hsl(${hue},55%,45%);">${initial}</span>`
         }
         ${this._domain && !uploaded ? `<span class="lo-pin-initial" style="background:hsl(${hue},55%,45%);display:none;">${initial}</span>` : ''}
@@ -3001,7 +2999,7 @@ function reviewLogos() {
         const badgeClass = item.status === 'initial' ? 'bad' : 'warn';
         const badgeText = item.status === 'initial' ? 'missing' : 'low-res';
         const imgSrc = item.domain
-          ? `https://img.logo.dev/${item.domain}?token=pk_LLZPmSyxQnKo_8UpB07OVA&size=64`
+          ? `https://img.logo.dev/${item.domain}?token=pk_LLZPmSyxQnKo_8UpB07OVA&size=200&format=png`
           : '';
         html += `<div class="review-item" data-rv-idx="${idx}" onclick="reviewJumpTo(${idx})">
           ${imgSrc ? `<img class="rv-logo" src="${imgSrc}" onerror="this.style.display='none'">` : ''}
@@ -3124,7 +3122,7 @@ function findBrand() {
   if (!query || !map) return;
   setStatus(`Searching for ${query}…`);
   const matched = lookupBrand(query);
-  const domain = matched ? matched.domain : '';
+  const domain = matched ? matched.domain : query.toLowerCase().replace(/[^a-z0-9]/g,'') + '.com';
   const service = new google.maps.places.PlacesService(map);
   service.textSearch({ query, bounds: map.getBounds() }, (results, status) => {
     if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
