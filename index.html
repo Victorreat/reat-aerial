@@ -2504,17 +2504,17 @@ function initMap() {
       // Leader line (shadow + main) + anchor dot
       this._lineShadow = new google.maps.Polyline({
         path: [this._anchorPos, this._anchorPos],
-        strokeColor: '#000000', strokeWeight: 7, strokeOpacity: 0.45, map: null,
+        strokeColor: '#000000', strokeWeight: 4, strokeOpacity: 0.35, map: null,
         zIndex: 1
       });
       this._line = new google.maps.Polyline({
         path: [this._anchorPos, this._anchorPos],
-        strokeColor: '#cba040', strokeWeight: 3, strokeOpacity: 1, map: null,
+        strokeColor: '#cba040', strokeWeight: 2, strokeOpacity: 0.9, map: null,
         zIndex: 2
       });
       this._dot = new google.maps.Marker({
         position: this._anchorPos,
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 6, fillColor: '#cba040', fillOpacity: 1, strokeColor: '#000', strokeWeight: 2 },
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: '#cba040', fillOpacity: 0.9, strokeColor: '#000', strokeWeight: 1.5 },
         map: this.getMap() || map
       });
 
