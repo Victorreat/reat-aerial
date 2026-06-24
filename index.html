@@ -2480,8 +2480,22 @@ function initMap() {
       if (initial) initial.style.display = 'none';
     }
     // Hide/show without destroying — used by groups
-    _hide() { this._hidden = true; if (this._el) this._el.style.display = 'none'; if (this._line) this._line.setMap(null); if (this._dot) this._dot.setMap(null); }
-    _show() { this._hidden = false; if (this._el) this._el.style.display = ''; this.draw(); }
+    _hide() {
+      this._hidden = true;
+      if (this._el && this._el.parentNode) {
+        this._elParent = this._el.parentNode;
+        this._el.parentNode.removeChild(this._el);
+      }
+      if (this._line) this._line.setMap(null);
+      if (this._dot) this._dot.setMap(null);
+    }
+    _show() {
+      this._hidden = false;
+      if (this._el && this._elParent && !this._el.parentNode) {
+        this._elParent.appendChild(this._el);
+      }
+      this.draw();
+    }
     onRemove() {
       if (this._el) { this._el.parentNode && this._el.parentNode.removeChild(this._el); this._el=null; }
       if (this._line) { this._line.setMap(null); this._line=null; }
