@@ -839,6 +839,25 @@
   }
   .logo-group-collapse:hover { background: rgba(200,50,50,0.8); }
 
+  /* Group control buttons (on hover) */
+  .logo-group-controls {
+    position: absolute; top: -10px; right: -10px;
+    display: none; flex-direction: column; gap: 3px; z-index: 14;
+  }
+  .logo-group-wrap:hover .logo-group-controls { display: flex; }
+  .logo-group-ctrl-btn {
+    width: auto; min-width: 20px; height: 20px;
+    background: rgba(0,0,0,0.75); color: #fff;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 10px; font-size: 9px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    padding: 0 6px; font-family: 'DM Sans', sans-serif;
+    white-space: nowrap;
+  }
+  .logo-group-ctrl-btn:hover { background: rgba(0,0,0,0.9); }
+  .logo-group-ctrl-btn.ungroup-ctrl:hover { background: rgba(200,50,50,0.8); }
+  .logo-group-ctrl-btn.add-ctrl { font-size: 13px; font-weight: 700; padding: 0 5px; }
+
   /* Floating group action bar */
   .logo-group-actions {
     position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
@@ -2482,14 +2501,20 @@ function initMap() {
       this._el = el;
       this._buildGroupBox();
 
-      // Leader line + anchor dot
+      // Leader line (shadow + main) + anchor dot
+      this._lineShadow = new google.maps.Polyline({
+        path: [this._anchorPos, this._anchorPos],
+        strokeColor: '#000000', strokeWeight: 7, strokeOpacity: 0.45, map: null,
+        zIndex: 1
+      });
       this._line = new google.maps.Polyline({
         path: [this._anchorPos, this._anchorPos],
-        strokeColor: '#cba040', strokeWeight: 1.5, strokeOpacity: 0.6, map: null
+        strokeColor: '#cba040', strokeWeight: 3, strokeOpacity: 1, map: null,
+        zIndex: 2
       });
       this._dot = new google.maps.Marker({
         position: this._anchorPos,
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#cba040', fillOpacity: 0.85, strokeColor: '#fff', strokeWeight: 1.5 },
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 6, fillColor: '#cba040', fillOpacity: 1, strokeColor: '#000', strokeWeight: 2 },
         map: this.getMap() || map
       });
 
@@ -2530,9 +2555,11 @@ function initMap() {
 
     _buildGroupBox() {
       if (!this._el) return;
-      // Remove old box if any
+      // Remove old elements
       const old = this._el.querySelector('.logo-group-box');
       if (old) old.remove();
+      const oldCtrl = this._el.querySelector('.logo-group-controls');
+      if (oldCtrl) oldCtrl.remove();
       const oldCollapse = this._el.querySelector('.logo-group-collapse');
       if (oldCollapse) oldCollapse.remove();
 
@@ -2580,6 +2607,32 @@ function initMap() {
       box.appendChild(count);
 
       this._el.appendChild(box);
+
+      // Hover control buttons: Ungroup + Add
+      const controls = document.createElement('div');
+      controls.className = 'logo-group-controls';
+
+      const ungroupBtn = document.createElement('button');
+      ungroupBtn.className = 'logo-group-ctrl-btn ungroup-ctrl';
+      ungroupBtn.textContent = 'Ungroup';
+      ungroupBtn.title = 'Ungroup all logos';
+      ungroupBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        this._autoUngroup();
+      });
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'logo-group-ctrl-btn add-ctrl';
+      addBtn.textContent = '+';
+      addBtn.title = 'Add selected logos to this group';
+      addBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        this._addSelectedToGroup();
+      });
+
+      controls.appendChild(ungroupBtn);
+      controls.appendChild(addBtn);
+      this._el.appendChild(controls);
     }
 
     draw() {
@@ -2592,16 +2645,21 @@ function initMap() {
       this._el.style.top = (pt.y - 20) + 'px';
       this._el.style.transform = 'translate(-50%, -100%)';
 
-      // Leader line from box to anchor dot
+      // Leader line (shadow + main) from box to anchor dot
       const anchorPt = proj.fromLatLngToDivPixel(this._anchorPos);
       if (pt && anchorPt && this._line && this._dot) {
         const dx = pt.x - anchorPt.x, dy = pt.y - anchorPt.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
+        const m = this.getMap() || map;
         if (dist > 20) {
-          this._line.setPath([this._anchorPos, this._pos]);
-          this._line.setMap(this.getMap() || map);
-          this._dot.setMap(this.getMap() || map);
+          const path = [this._anchorPos, this._pos];
+          this._lineShadow.setPath(path);
+          this._lineShadow.setMap(m);
+          this._line.setPath(path);
+          this._line.setMap(m);
+          this._dot.setMap(m);
         } else {
+          this._lineShadow.setMap(null);
           this._line.setMap(null);
           this._dot.setMap(null);
         }
@@ -2630,7 +2688,7 @@ function initMap() {
         ov._show();
       });
 
-      // Add collapse button
+      // Add collapse + ungroup buttons
       const collapseBtn = document.createElement('div');
       collapseBtn.className = 'logo-group-collapse';
       collapseBtn.textContent = '×';
@@ -2640,6 +2698,7 @@ function initMap() {
         this.collapse();
       });
       this._el.appendChild(collapseBtn);
+
 
       // Click map to collapse
       this._mapClickListener = map.addListener('click', () => this.collapse());
@@ -2677,10 +2736,22 @@ function initMap() {
       this._overlays.push(ov);
       ov._group = this;
       if (!this._expanded) {
-        ov.setMap(null);
+        ov._hide();
         this._buildGroupBox();
         this.draw();
       }
+    }
+
+    _addSelectedToGroup() {
+      const selected = placedMarkers.filter(m => m._selected && !m._group && m.getMap());
+      if (!selected.length) { setStatus('Shift-click logos first, then click + to add'); return; }
+      selected.forEach(ov => {
+        ov._selected = false;
+        if (ov._pin) ov._pin.classList.remove('lo-selected');
+        this.addOverlay(ov);
+      });
+      _hideGroupActions();
+      setStatus(`Added ${selected.length} logo(s) to group`);
     }
 
     removeOverlay(ov) {
@@ -2713,6 +2784,7 @@ function initMap() {
         google.maps.event.removeListener(this._mapClickListener);
         this._mapClickListener = null;
       }
+      if (this._lineShadow) { this._lineShadow.setMap(null); this._lineShadow = null; }
       if (this._line) { this._line.setMap(null); this._line = null; }
       if (this._dot) { this._dot.setMap(null); this._dot = null; }
       if (this._el && this._el.parentNode) {
