@@ -809,6 +809,15 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 700; color: #fff;
   }
+  .logo-group-header {
+    grid-column: 1 / -1;
+    font-size: 10px; font-weight: 600; color: rgba(0,0,0,0.75);
+    text-align: center; padding-bottom: 3px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: text; white-space: nowrap;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    margin-bottom: 2px;
+  }
   .logo-group-count {
     grid-column: 1 / -1;
     font-size: 9px; color: rgba(0,0,0,0.55);
@@ -2604,9 +2613,25 @@ function initMap() {
       });
 
 
+      // Editable header label
+      const header = document.createElement('div');
+      header.className = 'logo-group-header';
+      header.textContent = this._header || '';
+      header.style.display = this._header ? '' : 'none';
+      header.addEventListener('dblclick', e => {
+        e.stopPropagation();
+        const val = prompt('Group label:', this._header || '');
+        if (val !== null) {
+          this._header = val.trim();
+          header.textContent = this._header;
+          header.style.display = this._header ? '' : 'none';
+        }
+      });
+      box.insertBefore(header, box.firstChild);
+
       this._el.appendChild(box);
 
-      // Hover control buttons: Ungroup + Add
+      // Hover control buttons: Ungroup + Add + Label
       const controls = document.createElement('div');
       controls.className = 'logo-group-controls';
 
@@ -2628,8 +2653,23 @@ function initMap() {
         this._addSelectedToGroup();
       });
 
+      const labelBtn = document.createElement('button');
+      labelBtn.className = 'logo-group-ctrl-btn';
+      labelBtn.textContent = 'Aa';
+      labelBtn.title = 'Add/edit group label';
+      labelBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const val = prompt('Group label:', this._header || '');
+        if (val !== null) {
+          this._header = val.trim();
+          const h = this._el.querySelector('.logo-group-header');
+          if (h) { h.textContent = this._header; h.style.display = this._header ? '' : 'none'; }
+        }
+      });
+
       controls.appendChild(ungroupBtn);
       controls.appendChild(addBtn);
+      controls.appendChild(labelBtn);
       this._el.appendChild(controls);
     }
 
@@ -4297,7 +4337,9 @@ function _captureMapState() {
         if (idx >= 0) indices.push(idx);
       });
       if (indices.length >= 2) {
-        state.groups.push({ anchor: { lat: aLat, lng: aLng }, pos: { lat: pLat, lng: pLng }, logoIndices: indices });
+        const entry = { anchor: { lat: aLat, lng: aLng }, pos: { lat: pLat, lng: pLng }, logoIndices: indices };
+        if (g._header) entry.header = g._header;
+        state.groups.push(entry);
       }
     } catch (e) { /* skip broken group */ }
   });
@@ -4393,6 +4435,7 @@ function _restoreMapState(state) {
           const anchor = new google.maps.LatLng(g.anchor.lat, g.anchor.lng);
           const group = new _LogoGroup(anchor, overlays);
           if (g.pos) group._pos = new google.maps.LatLng(g.pos.lat, g.pos.lng);
+          if (g.header) group._header = g.header;
           group.setMap(map);
           logoGroups.push(group);
           overlays.forEach(ov => ov._hide());
