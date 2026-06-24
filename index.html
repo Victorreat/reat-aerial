@@ -2527,7 +2527,18 @@ function initMap() {
       this._dot = new google.maps.Marker({
         position: this._anchorPos,
         icon: { path: google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: '#cba040', fillOpacity: 0.9, strokeColor: '#000', strokeWeight: 1.5 },
+        draggable: true,
+        cursor: 'move',
+        title: 'Drag to move anchor point',
         map: this.getMap() || map
+      });
+      this._dot.addListener('drag', () => {
+        this._anchorPos = this._dot.getPosition();
+        this.draw();
+      });
+      this._dot.addListener('dragend', () => {
+        this._anchorPos = this._dot.getPosition();
+        this.draw();
       });
 
       // Click to expand (only if not dragged)
