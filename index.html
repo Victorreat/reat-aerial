@@ -2324,9 +2324,9 @@ function initMap() {
       const resizeBtn = el.querySelector('.lo-pin-resize');
       const noBgBtn = el.querySelector('.lo-pin-nobg');
 
-      xBtn.addEventListener('click', e => { e.stopPropagation(); this.setMap(null); });
+      xBtn.addEventListener('click', e => { e.stopPropagation(); this.setMap(null); _debounceSave(); });
       uploadBtn.addEventListener('click', e => { e.stopPropagation(); triggerLogoUpload(this._logoKey, this); });
-      noBgBtn.addEventListener('click', e => { e.stopPropagation(); this._noBg = !this._noBg; pin.classList.toggle('no-bg', this._noBg); });
+      noBgBtn.addEventListener('click', e => { e.stopPropagation(); this._noBg = !this._noBg; pin.classList.toggle('no-bg', this._noBg); _debounceSave(); });
 
       // Double-click pin to enlarge (step up scale by 0.4)
       pin.addEventListener('dblclick', e => {
@@ -2336,6 +2336,7 @@ function initMap() {
           ov._customScale = Math.min(4, (ov._customScale || 1) + 0.4);
           ov.draw();
         });
+        _debounceSave();
       });
 
       // Shift+click to toggle selection for group resize / grouping
@@ -2379,7 +2380,9 @@ function initMap() {
           this._dot.setPosition(this._pos);
           this._line.setMap(null);
           this._dot.setMap(null);
+          _debounceSave();
         }
+        if (resizing) _debounceSave();
         dragging=false; resizing=false;
       };
       document.addEventListener('mousemove', onMove);
@@ -2399,6 +2402,7 @@ function initMap() {
         e.preventDefault(); e.stopPropagation();
         const targets = this._getResizeTargets();
         targets.forEach(ov => { ov._customScale = 1; ov.draw(); });
+        _debounceSave();
       });
       document.addEventListener('mousemove', e => {
         if (!resizing) return;
@@ -3901,6 +3905,7 @@ function handleLogoUpload(e) {
         _activeUploadOverlay.updateLogo(dataUrl);
       }
       setStatus('Logo uploaded and saved');
+      _debounceSave();
       _activeUploadOverlay = null;
     };
     img.src = reader.result;
@@ -4563,6 +4568,14 @@ async function saveMap() {
 function _startAutosave() {
   if (_autosaveTimer) clearInterval(_autosaveTimer);
   _autosaveTimer = setInterval(_autosave, 30000); // every 30 seconds
+}
+
+// Debounced save — call after any visual change (no-bg, resize, drag, delete)
+let _debounceSaveTimer = null;
+function _debounceSave() {
+  if (!_activeMapId) return;
+  if (_debounceSaveTimer) clearTimeout(_debounceSaveTimer);
+  _debounceSaveTimer = setTimeout(_autosave, 1500);
 }
 
 async function _autosave() {
