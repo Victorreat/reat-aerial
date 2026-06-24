@@ -4165,7 +4165,15 @@ async function exportImage(format, size) {
 function _restoreExportUI(hideEls, logoImgs, mapContainer) {
   hideEls.forEach(el => el.style.display = '');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse').forEach(el => el.style.removeProperty('display'));
-  mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => el.style.removeProperty('display'));
+  // Only re-show initials that were visible before export (skip pins with working images)
+  mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => {
+    const pin = el.closest('.lo-pin');
+    const img = pin?.querySelector('.lo-pin-img');
+    // Only show initial if there's no image or image is hidden
+    if (!img || img.style.display === 'none') {
+      el.style.removeProperty('display');
+    }
+  });
   // Restore off-screen pins
   mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
     if (pin._wasOffscreen) { pin.style.removeProperty('display'); delete pin._wasOffscreen; }
