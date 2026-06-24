@@ -814,7 +814,7 @@
     font-size: 10px; font-weight: 600; color: rgba(0,0,0,0.75);
     text-align: center; padding-bottom: 3px;
     font-family: 'DM Sans', sans-serif;
-    cursor: text; white-space: nowrap;
+    cursor: text; word-wrap: break-word;
     border-bottom: 1px solid rgba(0,0,0,0.1);
     margin-bottom: 2px;
   }
@@ -2437,8 +2437,8 @@ function initMap() {
       const pt = proj.fromLatLngToDivPixel(this._pos);
       if (pt && this._el) { this._el.style.left=pt.x+'px'; this._el.style.top=pt.y+'px'; }
 
-      // If hidden by group, don't re-show line/dot
-      if (this._el && this._el.style.display === 'none') return;
+      // If hidden by group, don't re-show anything
+      if (this._hidden) return;
 
       // Scale pins based on zoom — shrink when zoomed out so aerial stays visible
       if (this._pin && this.getMap()) {
@@ -2480,8 +2480,8 @@ function initMap() {
       if (initial) initial.style.display = 'none';
     }
     // Hide/show without destroying — used by groups
-    _hide() { if (this._el) this._el.style.display = 'none'; if (this._line) this._line.setMap(null); if (this._dot) this._dot.setMap(null); }
-    _show() { if (this._el) this._el.style.display = ''; this.draw(); }
+    _hide() { this._hidden = true; if (this._el) this._el.style.display = 'none'; if (this._line) this._line.setMap(null); if (this._dot) this._dot.setMap(null); }
+    _show() { this._hidden = false; if (this._el) this._el.style.display = ''; this.draw(); }
     onRemove() {
       if (this._el) { this._el.parentNode && this._el.parentNode.removeChild(this._el); this._el=null; }
       if (this._line) { this._line.setMap(null); this._line=null; }
