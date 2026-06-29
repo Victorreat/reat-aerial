@@ -3816,7 +3816,9 @@ function _sweepDuplicateLogos() {
 
   for (let i = 0; i < placedMarkers.length; i++) {
     const ov = placedMarkers[i];
-    if (!ov.getMap() && !ov._group) continue; // already removed or hidden but not grouped
+    // Skip grouped or hidden overlays — they're managed by their group
+    if (ov._group || ov._hidden) continue;
+    if (!ov.getMap()) continue; // already removed
     const key = ov._logoKey || ov._name.toLowerCase().replace(/[^a-z0-9]/g, '');
     let isDup = false;
 
@@ -3836,7 +3838,6 @@ function _sweepDuplicateLogos() {
     }
 
     if (isDup) {
-      if (ov._group) ov._group.removeOverlay(ov);
       ov.setMap(null);
       removed.push(ov);
     } else {
@@ -4618,6 +4619,12 @@ async function loadSavedMapsList() {
 }
 
 async function loadMap(id) {
+  // Detach current map first to prevent autosave overwrites
+  if (_activeMapId && _activeMapId !== id) {
+    if (_autosaveTimer) { clearInterval(_autosaveTimer); _autosaveTimer = null; }
+    if (_debounceSaveTimer) { clearTimeout(_debounceSaveTimer); _debounceSaveTimer = null; }
+    _setActiveMap(null, null);
+  }
   setStatus('Loading map…');
   const { data, error } = await _supa
     .from('saved_maps')
