@@ -1409,6 +1409,13 @@
         <div class="export-opt-desc">Standard aerial with logos + branding · 2339×1654px</div>
       </div>
     </div>
+    <div class="export-opt" onclick="exportImage('png','WIDE')">
+      <span class="export-opt-icon">🖼️</span>
+      <div class="export-opt-info">
+        <div class="export-opt-title">PNG — Widescreen</div>
+        <div class="export-opt-desc">Ultra-wide presentation format · 2682×1365px</div>
+      </div>
+    </div>
     <div class="export-opt" onclick="exportImage('jpg','A3')">
       <span class="export-opt-icon">📷</span>
       <div class="export-opt-info">
@@ -4051,7 +4058,7 @@ async function _imgToDataUrl(img) {
 }
 
 // A3 landscape 200dpi = 3307×2339, A4 landscape 200dpi = 2339×1654
-const EXPORT_SIZES = { A3: { w: 3307, h: 2339 }, A4: { w: 2339, h: 1654 } };
+const EXPORT_SIZES = { A3: { w: 3307, h: 2339 }, A4: { w: 2339, h: 1654 }, WIDE: { w: 2682, h: 1365 } };
 
 async function exportImage(format, size) {
   if (!map) return;
