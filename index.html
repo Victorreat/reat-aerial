@@ -2460,6 +2460,11 @@ function initMap() {
       }
 
       this.getPanes().overlayMouseTarget.appendChild(el);
+      // If this overlay is hidden (part of a group), keep it hidden
+      if (this._hidden) {
+        this._elParent = el.parentNode;
+        el.parentNode.removeChild(el);
+      }
     }
     _getResizeTargets() {
       const selected = placedMarkers.filter(m => m._selected && m._pin);
