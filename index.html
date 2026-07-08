@@ -671,7 +671,8 @@
     transition: box-shadow 0.15s, transform 0.15s;
     will-change: transform;
   }
-  .lo-pin:hover { box-shadow: 0 3px 16px rgba(0,0,0,0.5); }
+  .lo-pin:hover { box-shadow: 0 3px 16px rgba(0,0,0,0.5); transform: scale(1.15); z-index: 1000 !important; }
+  .lo-pin.lo-focused { box-shadow: 0 3px 16px rgba(0,0,0,0.5); outline: 3px solid var(--gold); outline-offset: 2px; z-index: 1001 !important; }
   .lo-pin-img {
     width: 32px; height: 32px;
     border-radius: 50%;
@@ -704,7 +705,7 @@
     pointer-events: none;
     z-index: 10;
   }
-  .lo-pin:hover .lo-pin-tooltip { display: block; }
+  .lo-pin:hover .lo-pin-tooltip, .lo-pin.lo-focused .lo-pin-tooltip { display: block; }
   .lo-pin-x {
     position: absolute;
     top: -4px; right: -4px;
@@ -720,7 +721,7 @@
     line-height: 1;
     z-index: 11;
   }
-  .lo-pin:hover .lo-pin-x { display: flex; }
+  .lo-pin:hover .lo-pin-x, .lo-pin.lo-focused .lo-pin-x { display: flex; }
   .lo-pin-upload {
     position: absolute;
     bottom: -4px; right: -4px;
@@ -736,7 +737,7 @@
     line-height: 1;
     z-index: 11;
   }
-  .lo-pin:hover .lo-pin-upload { display: flex; }
+  .lo-pin:hover .lo-pin-upload, .lo-pin.lo-focused .lo-pin-upload { display: flex; }
   .lo-pin-resize {
     position: absolute;
     bottom: -4px; left: -4px;
@@ -752,7 +753,7 @@
     line-height: 1;
     z-index: 11;
   }
-  .lo-pin:hover .lo-pin-resize { display: flex; }
+  .lo-pin:hover .lo-pin-resize, .lo-pin.lo-focused .lo-pin-resize { display: flex; }
   .lo-pin.lo-selected { outline: 3px solid #3498db; outline-offset: 2px; border-radius: 50%; }
   .lo-pin-nobg {
     position: absolute;
@@ -769,7 +770,7 @@
     line-height: 1;
     z-index: 11;
   }
-  .lo-pin:hover .lo-pin-nobg { display: flex; }
+  .lo-pin:hover .lo-pin-nobg, .lo-pin.lo-focused .lo-pin-nobg { display: flex; }
   .lo-pin.no-bg {
     background: transparent;
     border: none;
@@ -2353,6 +2354,12 @@ function initMap() {
           this._selected = !this._selected;
           pin.classList.toggle('lo-selected', this._selected);
           _updateGroupActions();
+        } else {
+          e.stopPropagation();
+          // Unfocus all other pins, then focus this one
+          _unfocusAllPins();
+          pin.classList.add('lo-focused');
+          this._focused = true;
         }
       });
 
@@ -2899,11 +2906,13 @@ function initMap() {
     // Deselect all logo pins
     placedMarkers.forEach(m => { if (m._selected) { m._selected = false; if (m._pin) m._pin.classList.remove('lo-selected'); } });
     _hideGroupActions();
+    _unfocusAllPins();
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       placedMarkers.forEach(m => { if (m._selected) { m._selected = false; if (m._pin) m._pin.classList.remove('lo-selected'); } });
       _hideGroupActions();
+      _unfocusAllPins();
     }
   });
 
@@ -3759,6 +3768,11 @@ function _ungroupAll() {
 
 // ─── GROUP / UNGROUP ACTION BAR ────────────────────────────────────────────
 let _groupActionsEl = null;
+
+function _unfocusAllPins() {
+  document.querySelectorAll('.lo-pin.lo-focused').forEach(el => el.classList.remove('lo-focused'));
+  placedMarkers.forEach(m => m._focused = false);
+}
 
 function _updateGroupActions() {
   const selected = placedMarkers.filter(m => m._selected && m.getMap());
