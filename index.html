@@ -790,31 +790,46 @@
     border-radius: 8px;
     padding: 6px;
     display: grid;
-    grid-template-columns: repeat(3, 28px);
-    gap: 4px;
+    grid-template-columns: repeat(3, var(--logo-size, 28px));
+    gap: var(--logo-gap, 4px);
     cursor: grab;
     border: 1px solid rgba(0,0,0,0.12);
-    transition: transform 0.15s, box-shadow 0.15s;
+    transition: box-shadow 0.15s;
+    position: relative;
   }
-  .logo-group-box:hover { transform: scale(1.06); box-shadow: 0 2px 12px rgba(0,0,0,0.5); }
+  .logo-group-box:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.5); }
   .logo-group-box .group-logo {
-    width: 28px; height: 28px;
+    width: var(--logo-size, 28px); height: var(--logo-size, 28px);
     border-radius: 50%;
-    object-fit: cover;
+    object-fit: contain;
     background: rgba(255,255,255,0.6);
     border: 1px solid rgba(0,0,0,0.15);
   }
   .logo-group-box .group-initial {
-    width: 28px; height: 28px;
+    width: var(--logo-size, 28px); height: var(--logo-size, 28px);
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; color: #fff;
+    font-size: calc(var(--logo-size, 28px) * 0.4); font-weight: 700; color: #fff;
   }
+  .logo-group-resize {
+    position: absolute; bottom: -4px; right: -4px;
+    width: 14px; height: 14px;
+    cursor: nwse-resize; z-index: 15;
+    background: rgba(0,0,0,0.5); border-radius: 3px;
+    display: none;
+  }
+  .logo-group-resize::after {
+    content: ''; position: absolute; bottom: 2px; right: 2px;
+    width: 6px; height: 6px;
+    border-right: 2px solid rgba(255,255,255,0.8);
+    border-bottom: 2px solid rgba(255,255,255,0.8);
+  }
+  .logo-group-wrap:hover .logo-group-resize { display: block; }
   .logo-group-header {
     grid-column: 1 / -1;
-    font-size: 10px; font-weight: 600; color: rgba(0,0,0,0.75);
+    font-size: var(--header-size, 10px); font-weight: 700; color: rgba(0,0,0,0.8);
     text-align: center; padding-bottom: 3px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'avenir-next-lt-pro', 'DM Sans', sans-serif;
     cursor: text; word-wrap: break-word;
     border-bottom: 1px solid rgba(0,0,0,0.1);
     margin-bottom: 2px;
@@ -1068,6 +1083,7 @@
   }
   #app-content { display: none; flex: 1; flex-direction: column; min-height: 0; }
 </style>
+<link rel="stylesheet" href="https://use.typekit.net/smz3eya.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script
@@ -2535,6 +2551,8 @@ function initMap() {
       this._overlays = [...overlays];
       this._expanded = false;
       this._el = null;
+      this._customWidth = null;  // user-set width (null = auto)
+      this._customHeight = null; // user-set height (null = auto)
       // Register group reference on each overlay
       this._overlays.forEach(ov => { ov._group = this; });
     }
@@ -2608,6 +2626,41 @@ function initMap() {
       this.getPanes().overlayMouseTarget.appendChild(el);
     }
 
+    _calcLogoLayout(boxWidth) {
+      const n = this._overlays.length;
+      const pad = 12; // 6px padding each side
+      const gap = 4;
+      // Smart max logo size based on count
+      let maxLogo;
+      if (n <= 6) maxLogo = 48;
+      else if (n <= 12) maxLogo = 36;
+      else if (n <= 20) maxLogo = 28;
+      else maxLogo = 22;
+      maxLogo = Math.min(maxLogo, 80); // absolute max for quality
+
+      if (boxWidth) {
+        const avail = boxWidth - pad;
+        const cols = Math.max(1, Math.floor((avail + gap) / (maxLogo + gap)));
+        const logoSize = Math.min(maxLogo, Math.floor((avail - (cols - 1) * gap) / cols));
+        return { cols, logoSize: Math.max(16, logoSize), gap };
+      }
+      // Auto: default columns
+      const cols = Math.min(3, n);
+      return { cols, logoSize: maxLogo, gap };
+    }
+
+    _applyBoxSize(box) {
+      const layout = this._calcLogoLayout(this._customWidth);
+      box.style.setProperty('--logo-size', layout.logoSize + 'px');
+      box.style.setProperty('--logo-gap', layout.gap + 'px');
+      box.style.setProperty('--header-size', Math.max(8, Math.round(layout.logoSize * 0.4)) + 'px');
+      box.style.gridTemplateColumns = `repeat(${layout.cols}, var(--logo-size))`;
+      if (this._customWidth) box.style.width = this._customWidth + 'px';
+      else box.style.removeProperty('width');
+      if (this._customHeight) { box.style.height = this._customHeight + 'px'; box.style.overflowY = 'auto'; }
+      else { box.style.removeProperty('height'); box.style.removeProperty('overflow-y'); }
+    }
+
     _buildGroupBox() {
       if (!this._el) return;
       // Remove old elements
@@ -2620,9 +2673,9 @@ function initMap() {
 
       const box = document.createElement('div');
       box.className = 'logo-group-box';
-      // Adjust columns: up to 3 per row
-      const cols = Math.min(3, this._overlays.length);
-      box.style.gridTemplateColumns = `repeat(${cols}, 28px)`;
+
+      // Apply sizing
+      this._applyBoxSize(box);
 
       this._overlays.forEach(ov => {
         const uploaded = getUploadedLogo(ov._logoKey);
@@ -2635,7 +2688,6 @@ function initMap() {
               this.dataset.fallback = '1';
               this.src = `https://www.google.com/s2/favicons?sz=64&domain=${ov._domain}`;
             } else {
-              // Replace with initial
               const init = document.createElement('span');
               init.className = 'group-initial';
               const hue = Math.abs(ov._name.split('').reduce((h,c)=>h+c.charCodeAt(0),0)) % 360;
@@ -2655,7 +2707,6 @@ function initMap() {
         }
       });
 
-
       // Editable header label
       const header = document.createElement('div');
       header.className = 'logo-group-header';
@@ -2671,6 +2722,32 @@ function initMap() {
         }
       });
       box.insertBefore(header, box.firstChild);
+
+      // Resize handle
+      const resizeHandle = document.createElement('div');
+      resizeHandle.className = 'logo-group-resize';
+      resizeHandle.title = 'Drag to resize';
+      let resizing = false, rsx, rsy, rsw, rsh;
+      resizeHandle.addEventListener('mousedown', e => {
+        e.stopPropagation(); e.preventDefault();
+        resizing = true;
+        rsx = e.clientX; rsy = e.clientY;
+        const rect = box.getBoundingClientRect();
+        rsw = rect.width; rsh = rect.height;
+      });
+      const onResizeMove = e => {
+        if (!resizing) return;
+        const dx = e.clientX - rsx, dy = e.clientY - rsy;
+        this._customWidth = Math.max(50, Math.round(rsw + dx));
+        this._customHeight = Math.max(40, Math.round(rsh + dy));
+        this._applyBoxSize(box);
+      };
+      const onResizeUp = () => {
+        if (resizing) { resizing = false; _debounceSave(); }
+      };
+      document.addEventListener('mousemove', onResizeMove);
+      document.addEventListener('mouseup', onResizeUp);
+      box.appendChild(resizeHandle);
 
       this._el.appendChild(box);
 
@@ -2726,14 +2803,32 @@ function initMap() {
       this._el.style.top = (pt.y - 20) + 'px';
       this._el.style.transform = 'translate(-50%, -100%)';
 
-      // Leader line (shadow + main) from box to anchor dot
+      // Leader line — connect to nearest edge of box, not center
       const anchorPt = proj.fromLatLngToDivPixel(this._anchorPos);
       if (pt && anchorPt && this._line && this._dot) {
-        const dx = pt.x - anchorPt.x, dy = pt.y - anchorPt.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const box = this._el.querySelector('.logo-group-box');
         const m = this.getMap() || map;
-        if (dist > 20) {
-          const path = [this._anchorPos, this._pos];
+        // Calculate box bounds in div pixels (box is centered above pt)
+        let bw = 100, bh = 60;
+        if (box) { bw = box.offsetWidth || bw; bh = box.offsetHeight || bh; }
+        const boxCx = pt.x;
+        const boxCy = pt.y - 20 - bh / 2; // center of box
+        const boxL = boxCx - bw / 2, boxR = boxCx + bw / 2;
+        const boxT = boxCy - bh / 2, boxB = boxCy + bh / 2;
+
+        // Find nearest point on box edge from anchor
+        const clampX = Math.max(boxL, Math.min(boxR, anchorPt.x));
+        const clampY = Math.max(boxT, Math.min(boxB, anchorPt.y));
+        // If anchor is inside box, use box center
+        const insideBox = anchorPt.x >= boxL && anchorPt.x <= boxR && anchorPt.y >= boxT && anchorPt.y <= boxB;
+        const edgePx = insideBox ? { x: boxCx, y: boxB } : { x: clampX, y: clampY };
+        const edgeLatLng = proj.fromDivPixelToLatLng(new google.maps.Point(edgePx.x, edgePx.y));
+
+        const dx = edgePx.x - anchorPt.x, dy = edgePx.y - anchorPt.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 10) {
+          const path = [this._anchorPos, edgeLatLng];
           this._lineShadow.setPath(path);
           this._lineShadow.setMap(m);
           this._line.setPath(path);
@@ -4121,7 +4216,7 @@ async function exportImage(format, size) {
   // Hide UI controls
   const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator, .place-indicator');
   hideEls.forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse').forEach(el => el.style.setProperty('display','none','important'));
+  document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse, .logo-group-resize, .logo-group-controls').forEach(el => el.style.setProperty('display','none','important'));
 
   // Hide ALL initial-letter placeholders first — they cause black circles and overlap
   mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => el.style.setProperty('display','none','important'));
@@ -4251,7 +4346,7 @@ async function exportImage(format, size) {
 
 function _restoreExportUI(hideEls, logoImgs, mapContainer) {
   hideEls.forEach(el => el.style.display = '');
-  document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse').forEach(el => el.style.removeProperty('display'));
+  document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse, .logo-group-resize, .logo-group-controls').forEach(el => el.style.removeProperty('display'));
   // Only re-show initials that were visible before export (skip pins with working images)
   mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => {
     const pin = el.closest('.lo-pin');
@@ -4391,6 +4486,8 @@ function _captureMapState() {
       if (indices.length >= 2) {
         const entry = { anchor: { lat: aLat, lng: aLng }, pos: { lat: pLat, lng: pLng }, logoIndices: indices };
         if (g._header) entry.header = g._header;
+        if (g._customWidth) entry.customWidth = g._customWidth;
+        if (g._customHeight) entry.customHeight = g._customHeight;
         state.groups.push(entry);
       }
     } catch (e) { /* skip broken group */ }
@@ -4488,6 +4585,8 @@ function _restoreMapState(state) {
           const group = new _LogoGroup(anchor, overlays);
           if (g.pos) group._pos = new google.maps.LatLng(g.pos.lat, g.pos.lng);
           if (g.header) group._header = g.header;
+          if (g.customWidth) group._customWidth = g.customWidth;
+          if (g.customHeight) group._customHeight = g.customHeight;
           group.setMap(map);
           logoGroups.push(group);
           overlays.forEach(ov => ov._hide());
