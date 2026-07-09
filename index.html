@@ -796,6 +796,8 @@
     border: 1px solid rgba(0,0,0,0.12);
     transition: box-shadow 0.15s;
     position: relative;
+    min-width: 0;
+    overflow: hidden;
   }
   .logo-group-box:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.5); }
   .logo-group-box .group-logo {
@@ -2645,9 +2647,15 @@ function initMap() {
 
       if (boxWidth) {
         const avail = boxWidth - pad;
-        const cols = Math.max(1, Math.floor((avail + gap) / (maxLogo + gap)));
-        const logoSize = Math.min(maxLogo, Math.floor((avail - (cols - 1) * gap) / cols));
-        return { cols, logoSize: Math.max(16, logoSize), gap };
+        // Try fitting at maxLogo first; if box is smaller, shrink logos
+        let cols = Math.max(1, Math.floor((avail + gap) / (maxLogo + gap)));
+        let logoSize = Math.min(maxLogo, Math.floor((avail - (cols - 1) * gap) / cols));
+        // If logos would be too small at current cols, reduce columns
+        if (logoSize < 12 && cols > 1) {
+          cols = Math.max(1, cols - 1);
+          logoSize = Math.min(maxLogo, Math.floor((avail - (cols - 1) * gap) / cols));
+        }
+        return { cols, logoSize: Math.max(10, logoSize), gap };
       }
       // Auto: default columns
       const cols = Math.min(3, n);
@@ -2743,8 +2751,8 @@ function initMap() {
       const onResizeMove = e => {
         if (!resizing) return;
         const dx = e.clientX - rsx, dy = e.clientY - rsy;
-        this._customWidth = Math.max(50, Math.round(rsw + dx));
-        this._customHeight = Math.max(40, Math.round(rsh + dy));
+        this._customWidth = Math.max(28, Math.round(rsw + dx));
+        this._customHeight = Math.max(24, Math.round(rsh + dy));
         this._applyBoxSize(box);
       };
       const onResizeUp = () => {
