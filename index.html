@@ -4397,6 +4397,20 @@ async function exportImage(format, size) {
     } else {
       const img = pin.querySelector('.lo-pin-img');
       if (img) logoImgs.push(img);
+      // Inline no-bg styles so html2canvas captures them correctly
+      if (pin.classList.contains('no-bg')) {
+        pin.style.setProperty('background', 'transparent', 'important');
+        pin.style.setProperty('border', 'none', 'important');
+        pin.style.setProperty('box-shadow', 'none', 'important');
+        pin._hadNoBgInline = true;
+        if (img) {
+          img.style.setProperty('width', '40px', 'important');
+          img.style.setProperty('height', '40px', 'important');
+          img.style.setProperty('border-radius', '0', 'important');
+          img.style.setProperty('object-fit', 'contain', 'important');
+          img._hadNoBgInline = true;
+        }
+      }
     }
   });
 
@@ -4519,9 +4533,23 @@ function _restoreExportUI(hideEls, logoImgs, mapContainer) {
       el.style.removeProperty('display');
     }
   });
-  // Restore off-screen pins
+  // Restore off-screen pins and no-bg inline overrides
   mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
     if (pin._wasOffscreen) { pin.style.removeProperty('display'); delete pin._wasOffscreen; }
+    if (pin._hadNoBgInline) {
+      pin.style.removeProperty('background');
+      pin.style.removeProperty('border');
+      pin.style.removeProperty('box-shadow');
+      delete pin._hadNoBgInline;
+      const img = pin.querySelector('.lo-pin-img');
+      if (img && img._hadNoBgInline) {
+        img.style.removeProperty('width');
+        img.style.removeProperty('height');
+        img.style.removeProperty('border-radius');
+        img.style.removeProperty('object-fit');
+        delete img._hadNoBgInline;
+      }
+    }
   });
   logoImgs.forEach(img => {
     if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
@@ -4610,6 +4638,9 @@ function _captureMapState() {
       };
       if (ov._customScale) logo.customScale = ov._customScale;
       if (ov._noBg) logo.noBg = true;
+      // Include uploaded custom logo image data
+      const uploaded = getUploadedLogo(ov._logoKey);
+      if (uploaded) logo.uploadedImg = uploaded;
       state.logos.push(logo);
     } catch (e) { /* skip broken overlay */ }
   });
@@ -4720,6 +4751,15 @@ function _restoreMapState(state) {
         if (!domain) {
           const matched = lookupBrand(l.name);
           if (matched) domain = matched.domain;
+        }
+        // Restore uploaded logo to localStorage before creating pin (so it picks it up)
+        if (l.uploadedImg) {
+          try {
+            const logos = JSON.parse(localStorage.getItem('reat_logos') || '{}');
+            const key = (l.domain || l.name.toLowerCase().replace(/[^a-z0-9]/g,''));
+            logos[key] = l.uploadedImg;
+            localStorage.setItem('reat_logos', JSON.stringify(logos));
+          } catch {}
         }
         const ov = _dropLogoPin(anchorLatLng, l.name, domain);
         if (ov) {
