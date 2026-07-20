@@ -590,6 +590,39 @@
     backdrop-filter: blur(4px);
   }
 
+  /* SELECT MODE */
+  .select-indicator {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(52,152,219,0.92);
+    color: #fff;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+    display: none;
+    z-index: 30;
+    backdrop-filter: blur(4px);
+    white-space: nowrap;
+  }
+  .select-rect {
+    position: absolute;
+    border: 2px dashed rgba(52,152,219,0.9);
+    background: rgba(52,152,219,0.12);
+    pointer-events: none;
+    z-index: 25;
+    display: none;
+  }
+  .map-ctrl-btn.select-active {
+    background: rgba(52,152,219,0.9);
+    color: #fff;
+    border-color: rgba(52,152,219,0.9);
+  }
+
   /* EXPORT PANEL */
   .export-panel {
     position: absolute;
@@ -935,7 +968,7 @@
     @page { size: A3 landscape; margin: 0; }  /* default; overridden by exportPrint() */
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     header, .sidebar, .status-bar, .export-panel, .overlay-backdrop,
-    .map-controls, .draw-indicator, #keyScreen { display: none !important; }
+    .map-controls, .draw-indicator, .select-indicator, .select-rect, #keyScreen { display: none !important; }
     body, .app-body, .map-container, #map {
       height: 100vh !important; width: 100vw !important;
       position: fixed !important; inset: 0 !important;
@@ -1363,6 +1396,8 @@
     <div id="map"></div>
     <div class="draw-indicator" id="drawIndicator">Draw Mode — Click to add as many points as needed — Double-click to finish — ESC to cancel</div>
     <div class="place-indicator" id="placeIndicator">Click on the map to place logo — <a href="#" onclick="event.preventDefault();exitPlaceMode()" style="color:#fff;text-decoration:underline;cursor:pointer;font-weight:600;">Cancel</a></div>
+    <div class="select-indicator" id="selectIndicator">Select Mode — Click & drag to select logos — ESC to cancel</div>
+    <div class="select-rect" id="selectRect"></div>
 
     <!-- MAP CONTROLS -->
     <div class="map-controls">
@@ -1370,6 +1405,7 @@
       <button class="map-ctrl-btn" title="Rotate +45°" onclick="rotateMap(45)">↻</button>
       <button class="map-ctrl-btn" title="Reset rotation" onclick="resetRotation()">⊕</button>
       <button class="map-ctrl-btn" title="My location" onclick="myLocation()">◎</button>
+      <button class="map-ctrl-btn" id="selectToolBtn" title="Select & enlarge logos" onclick="toggleSelectMode()">⬚</button>
     </div>
   </div>
 </div>
@@ -3351,6 +3387,120 @@ function undoLastHighlight() {
   last.setMap(null);
 }
 
+// ─── SELECT & ENLARGE TOOL ────────────────────────────────────────────────────
+let selectMode = false, selectStart = null;
+
+function toggleSelectMode() {
+  if (selectMode) { cancelSelectMode(); return; }
+  if (drawMode) cancelDrawing();
+  selectMode = true;
+  map.setOptions({ draggable: false, disableDoubleClickZoom: true });
+  document.getElementById('selectIndicator').style.display = 'block';
+  document.getElementById('selectToolBtn').classList.add('select-active');
+  document.getElementById('map').style.cursor = 'crosshair';
+  document.addEventListener('keydown', _escCancelSelect);
+
+  const mapDiv = document.getElementById('map');
+  mapDiv.addEventListener('mousedown', _selectMouseDown);
+  document.addEventListener('mousemove', _selectMouseMove);
+  document.addEventListener('mouseup', _selectMouseUp);
+}
+
+function cancelSelectMode() {
+  selectMode = false;
+  selectStart = null;
+  map.setOptions({ draggable: true, disableDoubleClickZoom: false });
+  document.getElementById('selectIndicator').style.display = 'none';
+  document.getElementById('selectToolBtn').classList.remove('select-active');
+  document.getElementById('map').style.cursor = '';
+  const rect = document.getElementById('selectRect');
+  rect.style.display = 'none';
+  document.removeEventListener('keydown', _escCancelSelect);
+  document.getElementById('map').removeEventListener('mousedown', _selectMouseDown);
+  document.removeEventListener('mousemove', _selectMouseMove);
+  document.removeEventListener('mouseup', _selectMouseUp);
+}
+
+function _escCancelSelect(e) { if (e.key === 'Escape') cancelSelectMode(); }
+
+function _selectMouseDown(e) {
+  if (!selectMode) return;
+  const mapContainer = document.querySelector('.map-container');
+  const cr = mapContainer.getBoundingClientRect();
+  selectStart = { x: e.clientX - cr.left, y: e.clientY - cr.top, cx: e.clientX, cy: e.clientY };
+  const rect = document.getElementById('selectRect');
+  rect.style.left = selectStart.x + 'px';
+  rect.style.top = selectStart.y + 'px';
+  rect.style.width = '0px';
+  rect.style.height = '0px';
+  rect.style.display = 'block';
+}
+
+function _selectMouseMove(e) {
+  if (!selectMode || !selectStart) return;
+  const mapContainer = document.querySelector('.map-container');
+  const cr = mapContainer.getBoundingClientRect();
+  const cx = e.clientX - cr.left, cy = e.clientY - cr.top;
+  const rect = document.getElementById('selectRect');
+  rect.style.left = Math.min(selectStart.x, cx) + 'px';
+  rect.style.top = Math.min(selectStart.y, cy) + 'px';
+  rect.style.width = Math.abs(cx - selectStart.x) + 'px';
+  rect.style.height = Math.abs(cy - selectStart.y) + 'px';
+}
+
+function _selectMouseUp(e) {
+  if (!selectMode || !selectStart) return;
+  const rect = document.getElementById('selectRect');
+  rect.style.display = 'none';
+
+  // Get selection bounds in screen coords
+  const mapContainer = document.querySelector('.map-container');
+  const cr = mapContainer.getBoundingClientRect();
+  const cx = e.clientX - cr.left, cy = e.clientY - cr.top;
+  const left = Math.min(selectStart.x, cx), right = Math.max(selectStart.x, cx);
+  const top = Math.min(selectStart.y, cy), bottom = Math.max(selectStart.y, cy);
+
+  // Ignore tiny accidental clicks (less than 10px)
+  if (right - left < 10 || bottom - top < 10) { selectStart = null; return; }
+
+  // Convert screen bounds to LatLng bounds
+  const proj = map.getProjection();
+  const scale = Math.pow(2, map.getZoom());
+  const mapBounds = map.getBounds();
+  const ne = mapBounds.getNorthEast(), sw = mapBounds.getSouthWest();
+  const mapDiv = document.getElementById('map');
+  const mw = mapDiv.offsetWidth, mh = mapDiv.offsetHeight;
+
+  // Screen pixel → LatLng using overlay projection from any placed marker
+  // Simpler: use bounds interpolation
+  const selWest = sw.lng() + (left / mw) * (ne.lng() - sw.lng());
+  const selEast = sw.lng() + (right / mw) * (ne.lng() - sw.lng());
+  const selNorth = ne.lat() - (top / mh) * (ne.lat() - sw.lat());
+  const selSouth = ne.lat() - (bottom / mh) * (ne.lat() - sw.lat());
+
+  // Select logos inside the rectangle (like batch shift+click)
+  let count = 0;
+  placedMarkers.forEach(ov => {
+    if (ov._hidden || !ov.getMap()) return;
+    const pos = ov._pos || ov._anchorPos;
+    const lat = pos.lat(), lng = pos.lng();
+    if (lat >= selSouth && lat <= selNorth && lng >= selWest && lng <= selEast) {
+      ov._selected = true;
+      if (ov._pin) ov._pin.classList.add('lo-selected');
+      count++;
+    }
+  });
+
+  selectStart = null;
+  if (count > 0) {
+    _updateGroupActions();
+    setStatus(`Selected ${count} logo${count > 1 ? 's' : ''} — resize, group, or double-click to enlarge`);
+  } else {
+    setStatus('No logos in selection area');
+  }
+  cancelSelectMode();
+}
+
 function clearHighlights() {
   highlightShapes.forEach(s => s.setMap(null));
   highlightShapes = [];
@@ -4227,7 +4377,7 @@ async function exportImage(format, size) {
   logoGroups.forEach(g => { if (g._expanded) g.collapse(); });
 
   // Hide UI controls
-  const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator, .place-indicator');
+  const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator, .place-indicator, .select-indicator, .select-rect');
   hideEls.forEach(el => el.style.display = 'none');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse, .logo-group-resize, .logo-group-controls').forEach(el => el.style.setProperty('display','none','important'));
 
