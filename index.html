@@ -4049,6 +4049,7 @@ function _showGroupActions(selected) {
   }
   const count = selected.length;
   _groupActionsEl.innerHTML = `<span>${count} logos selected</span>
+    <button onclick="_autoSpaceSelected()">Auto-space</button>
     <button onclick="_groupSelected()">Group</button>
     <button class="ungroup-btn" onclick="_ungroupSelected()">Ungroup</button>`;
   _groupActionsEl.style.display = 'flex';
@@ -4080,6 +4081,60 @@ function _ungroupSelected() {
   });
   _hideGroupActions();
   setStatus('Ungrouped');
+}
+
+// ─── AUTO-SPACE SELECTED LOGOS ──────────────────────────────────────────────
+function _autoSpaceSelected() {
+  const selected = placedMarkers.filter(m => m._selected && m.getMap() && !m._hidden);
+  if (selected.length < 2) { setStatus('Select at least 2 logos to auto-space'); return; }
+
+  // Get bounding box of selected logos' anchor positions
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  selected.forEach(ov => {
+    const pos = ov._anchorPos;
+    const lat = pos.lat(), lng = pos.lng();
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+  });
+
+  // Expand bounds by ~30% so logos aren't right at the edges
+  const latPad = (maxLat - minLat) * 0.15 || 0.001;
+  const lngPad = (maxLng - minLng) * 0.15 || 0.001;
+  minLat -= latPad; maxLat += latPad;
+  minLng -= lngPad; maxLng += lngPad;
+
+  // Sort logos top-to-bottom, left-to-right (by anchor position)
+  selected.sort((a, b) => {
+    const aLat = a._anchorPos.lat(), bLat = b._anchorPos.lat();
+    const aLng = a._anchorPos.lng(), bLng = b._anchorPos.lng();
+    // Group into rough rows (within ~25% of lat range)
+    const rowSize = (maxLat - minLat) / Math.max(1, Math.ceil(Math.sqrt(selected.length)));
+    const aRow = Math.floor((maxLat - aLat) / rowSize);
+    const bRow = Math.floor((maxLat - bLat) / rowSize);
+    if (aRow !== bRow) return aRow - bRow;
+    return aLng - bLng;
+  });
+
+  // Arrange in a grid within the bounds
+  const n = selected.length;
+  const cols = Math.ceil(Math.sqrt(n));
+  const rows = Math.ceil(n / cols);
+
+  selected.forEach((ov, i) => {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    // How many logos in this row (last row may have fewer)
+    const colsInRow = (row === rows - 1 && n % cols !== 0) ? (n % cols) : cols;
+    const lat = maxLat - (row + 0.5) / rows * (maxLat - minLat);
+    const lng = minLng + (col + 0.5) / colsInRow * (maxLng - minLng);
+    ov._pos = new google.maps.LatLng(lat, lng);
+    ov.draw();
+  });
+
+  _debounceSave();
+  setStatus(`Auto-spaced ${n} logos`);
 }
 
 // ─── SWEEP DUPLICATE LOGOS ──────────────────────────────────────────────────
