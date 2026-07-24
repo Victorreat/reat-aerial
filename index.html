@@ -4367,21 +4367,25 @@ async function _imgToDataUrl(img) {
 
   // 3. Last resort — generate a simple colored circle with initial letter as data URL
   const pin = img.closest('.lo-pin');
+  let name = '?';
   if (pin) {
-    const name = pin.querySelector('.lo-pin-tooltip')?.textContent || '?';
-    const letter = name.charAt(0).toUpperCase();
-    const c = document.createElement('canvas');
-    c.width = 64; c.height = 64;
-    const cx = c.getContext('2d');
-    cx.fillStyle = '#6a8a5a';
-    cx.beginPath(); cx.arc(32, 32, 32, 0, Math.PI * 2); cx.fill();
-    cx.fillStyle = '#fff';
-    cx.font = 'bold 32px sans-serif';
-    cx.textAlign = 'center'; cx.textBaseline = 'middle';
-    cx.fillText(letter, 32, 34);
-    img._origSrc = img.src;
-    img.src = c.toDataURL();
+    name = pin.querySelector('.lo-pin-tooltip')?.textContent || '?';
+  } else {
+    // Group logo — try to find name from alt or data attributes
+    name = img.alt || img.title || '?';
   }
+  const letter = name.charAt(0).toUpperCase();
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  const cx = c.getContext('2d');
+  cx.fillStyle = '#6a8a5a';
+  cx.beginPath(); cx.arc(32, 32, 32, 0, Math.PI * 2); cx.fill();
+  cx.fillStyle = '#fff';
+  cx.font = 'bold 32px sans-serif';
+  cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  cx.fillText(letter, 32, 34);
+  img._origSrc = img.src;
+  img.src = c.toDataURL();
 }
 
 // A3 landscape 200dpi = 3307×2339, A4 landscape 200dpi = 2339×1654
@@ -4450,6 +4454,9 @@ async function exportImage(format, size) {
       pin.style.setProperty('display','none','important');
       pin._wasOffscreen = true;
     } else {
+      // Force overflow:hidden so html2canvas clips images to the circle
+      pin.style.setProperty('overflow', 'hidden', 'important');
+      pin._hadOverflowInline = true;
       const img = pin.querySelector('.lo-pin-img');
       if (img) logoImgs.push(img);
       // Inline no-bg styles so html2canvas captures them correctly
@@ -4468,6 +4475,9 @@ async function exportImage(format, size) {
       }
     }
   });
+
+  // Also collect group logo images (inside logo-group-box) for CORS conversion
+  mapContainer.querySelectorAll('.logo-group-box .group-logo').forEach(img => logoImgs.push(img));
 
   setStatus(`Converting ${logoImgs.length} logos for export…`);
   // _imgToDataUrl will re-show initials only for images that truly fail
@@ -4588,9 +4598,10 @@ function _restoreExportUI(hideEls, logoImgs, mapContainer) {
       el.style.removeProperty('display');
     }
   });
-  // Restore off-screen pins and no-bg inline overrides
+  // Restore off-screen pins, overflow, and no-bg inline overrides
   mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
     if (pin._wasOffscreen) { pin.style.removeProperty('display'); delete pin._wasOffscreen; }
+    if (pin._hadOverflowInline) { pin.style.removeProperty('overflow'); delete pin._hadOverflowInline; }
     if (pin._hadNoBgInline) {
       pin.style.removeProperty('background');
       pin.style.removeProperty('border');
