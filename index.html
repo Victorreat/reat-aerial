@@ -1514,6 +1514,8 @@ const SECTORS = {
         { name: "Staples", domain: "staples.com", icon: "📎" },
         { name: "Office Depot", domain: "officedepot.com", icon: "📎" },
         { name: "Walmart Neighborhood Mkt", domain: "walmart.com", icon: "🔵" },
+        { name: "Bass Pro Shops", domain: "basspro.com", icon: "🎣" },
+        { name: "Cabela's", domain: "cabelas.com", icon: "🎣" },
       ]
     }
   },
@@ -1547,6 +1549,7 @@ const SECTORS = {
         { name: "Sprouts", domain: "sprouts.com", icon: "🥦" },
         { name: "The Fresh Market", domain: "thefreshmarket.com", icon: "🥦" },
         { name: "Natural Grocers", domain: "naturalgrocers.com", icon: "🥦" },
+        { name: "Piggly Wiggly", domain: "pigglywiggly.com", icon: "🐷" },
       ]
     }
   },
@@ -1595,6 +1598,7 @@ const SECTORS = {
         { name: "IKEA", domain: "ikea.com", icon: "🏠" },
         { name: "Restoration Hardware", domain: "rh.com", icon: "🏠" },
         { name: "The Container Store", domain: "containerstore.com", icon: "📦" },
+        { name: "World Market", domain: "worldmarket.com", icon: "🌍" },
       ]
     }
   },
@@ -1673,6 +1677,12 @@ const SECTORS = {
         { name: "Auntie Anne's", domain: "auntieannes.com", icon: "🥨" },
         { name: "Cinnabon", domain: "cinnabon.com", icon: "🍥" },
         { name: "Wetzel's Pretzels", domain: "wetzels.com", icon: "🥨" },
+        { name: "Dairy Queen", domain: "dairyqueen.com", icon: "🍦" },
+        { name: "Baskin-Robbins", domain: "baskinrobbins.com", icon: "🍦" },
+        { name: "Cold Stone Creamery", domain: "coldstonecreamery.com", icon: "🍦" },
+        { name: "Smoothie King", domain: "smoothieking.com", icon: "🥤" },
+        { name: "Crumbl Cookies", domain: "crumblcookies.com", icon: "🍪" },
+        { name: "Insomnia Cookies", domain: "insomniacookies.com", icon: "🍪" },
       ],
       "Fast Casual": [
         { name: "Chipotle", domain: "chipotle.com", icon: "🌯" },
@@ -1759,6 +1769,7 @@ const SECTORS = {
         { name: "Einstein Bagels", domain: "einsteins.com", icon: "🥯" },
         { name: "Bruegger's Bagels", domain: "brueggers.com", icon: "🥯" },
         { name: "Corner Bakery", domain: "cornerbakerycafe.com", icon: "🥐" },
+        { name: "Black Rifle Coffee", domain: "blackriflecoffee.com", icon: "☕" },
       ]
     }
   },
@@ -1971,6 +1982,8 @@ const SECTORS = {
         { name: "TracFone", domain: "tracfone.com", icon: "📱" },
         { name: "Simple Mobile", domain: "simplemobile.com", icon: "📱" },
         { name: "Net10 Wireless", domain: "net10wireless.com", icon: "📱" },
+        { name: "Spectrum", domain: "spectrum.com", icon: "📱" },
+        { name: "Metro by T-Mobile", domain: "metrobyt-mobile.com", icon: "📱" },
       ]
     }
   },
@@ -2043,6 +2056,7 @@ const SECTORS = {
         { name: "Columbia Sportswear", domain: "columbia.com", icon: "🧥" },
         { name: "REI", domain: "rei.com", icon: "🏔️" },
         { name: "Academy Sports", domain: "academy.com", icon: "🏈" },
+        { name: "Skechers", domain: "skechers.com", icon: "👟" },
       ]
     }
   },
@@ -2135,6 +2149,10 @@ const SECTORS = {
         { name: "Super 8", domain: "wyndhamhotels.com", icon: "🏨" },
         { name: "Motel 6", domain: "motel6.com", icon: "🏨" },
         { name: "Extended Stay America", domain: "extendedstayamerica.com", icon: "🏨" },
+        { name: "Home2 Suites", domain: "hilton.com", icon: "🏨" },
+        { name: "Tru by Hilton", domain: "hilton.com", icon: "🏨" },
+        { name: "SpringHill Suites", domain: "marriott.com", icon: "🏨" },
+        { name: "TownePlace Suites", domain: "marriott.com", icon: "🏨" },
       ]
     }
   },
@@ -2293,24 +2311,45 @@ function loadGoogleMaps(key) {
 }
 
 // ─── BRAND LOOKUP ─────────────────────────────────────────────────────────────
+function _normBrand(s) {
+  return s.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+}
+
 function buildBrandLookup() {
-  const lookup = {};
+  const exact = {};
+  const norm = {};
   Object.values(SECTORS).forEach(sector => {
     Object.values(sector.sub).forEach(brands => {
       brands.forEach(b => {
-        lookup[b.name.toLowerCase()] = { domain: b.domain, icon: b.icon, name: b.name };
+        const val = { domain: b.domain, icon: b.icon, name: b.name };
+        exact[b.name.toLowerCase()] = val;
+        const nk = _normBrand(b.name);
+        if (!norm[nk]) norm[nk] = val;
       });
     });
   });
-  return lookup;
+  // Sort normalized keys longest-first for best match priority
+  const sorted = Object.entries(norm).sort((a, b) => b[0].length - a[0].length);
+  return { exact, norm, sorted };
 }
 
 function lookupBrand(placeName) {
   if (!brandLookup) return null;
   const n = placeName.toLowerCase().trim();
-  if (brandLookup[n]) return brandLookup[n];
-  for (const [key, val] of Object.entries(brandLookup)) {
-    if (n.includes(key) || key.includes(n.replace(/[^a-z0-9 ]/g, ''))) return val;
+  // 1. Exact match on original name
+  if (brandLookup.exact[n]) return brandLookup.exact[n];
+  // 2. Exact match on normalized name
+  const clean = _normBrand(placeName);
+  if (brandLookup.norm[clean]) return brandLookup.norm[clean];
+  // 3. Place name contains a known brand (normalized, longest match first)
+  for (const [nk, val] of brandLookup.sorted) {
+    if (nk.length < 3) continue;
+    if (clean.includes(nk)) return val;
+  }
+  // 4. All words of a multi-word brand appear in place name
+  for (const [nk, val] of brandLookup.sorted) {
+    const bw = nk.split(' ');
+    if (bw.length >= 2 && bw.every(w => w.length > 1 && clean.includes(w))) return val;
   }
   return null;
 }
@@ -3845,6 +3884,7 @@ function toggleCategory(catId) {
 
   const service = new google.maps.places.PlacesService(map);
   const seenPlaceIds = new Set(); // deduplicate across queries
+  const seenDomainLocs = new Map(); // domain -> [LatLng, ...] for geographic dedup
   let foundCount = 0;
   let pending = queries.length;
 
@@ -3860,17 +3900,31 @@ function toggleCategory(catId) {
   function _withinTradeArea(loc) {
     return google.maps.geometry.spherical.computeDistanceBetween(searchCenter, loc) <= maxRadiusMeters;
   }
+  function _isDupDomain(domain, loc) {
+    if (!domain) return false;
+    const locs = seenDomainLocs.get(domain);
+    if (!locs) return false;
+    return locs.some(l => google.maps.geometry.spherical.computeDistanceBetween(l, loc) < 200);
+  }
+  function _trackDomain(domain, loc) {
+    if (!domain) return;
+    if (!seenDomainLocs.has(domain)) seenDomainLocs.set(domain, []);
+    seenDomainLocs.get(domain).push(loc);
+  }
 
   function placeResult(r) {
     if (!r.geometry || !r.place_id) return;
     if (seenPlaceIds.has(r.place_id)) return;
     if (_globalPlaceIds.has(r.place_id)) return; // skip if already placed by another category
-    seenPlaceIds.add(r.place_id);
-    _globalPlaceIds.add(r.place_id);
     if (!_withinTradeArea(r.geometry.location)) return; // skip results outside trade area
     const matched = lookupBrand(r.name);
     if (!isLandmark && !matched) return; // skip local/unknown for retail categories
-    const ov = _dropLogoPin(r.geometry.location, r.name, matched ? matched.domain : '');
+    const domain = matched ? matched.domain : '';
+    if (_isDupDomain(domain, r.geometry.location)) return; // skip same brand within 200m
+    seenPlaceIds.add(r.place_id);
+    _globalPlaceIds.add(r.place_id);
+    _trackDomain(domain, r.geometry.location);
+    const ov = _dropLogoPin(r.geometry.location, r.name, domain);
     if (ov) { ov._placeId = r.place_id; categoryMarkers[catId].push(ov); }
     foundCount++;
   }
@@ -4140,17 +4194,12 @@ function _autoSpaceSelected() {
 // ─── SWEEP DUPLICATE LOGOS ──────────────────────────────────────────────────
 function _sweepDuplicateLogos() {
   if (!map) return;
-  const proj = map.getProjection();
-  if (!proj) return;
-  const zoom = map.getZoom();
-  const scale = Math.pow(2, zoom);
-  const DIST_PX = 40; // same brand within 40px = duplicate
+  const MIN_DIST = 150; // meters — same brand within 150m = duplicate
   const kept = [];
   const removed = [];
 
   for (let i = 0; i < placedMarkers.length; i++) {
     const ov = placedMarkers[i];
-    // Skip grouped or hidden overlays — they're managed by their group
     if (ov._group || ov._hidden) continue;
     if (!ov.getMap()) continue; // already removed
     const key = ov._logoKey || ov._name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -4160,12 +4209,9 @@ function _sweepDuplicateLogos() {
       const k = kept[j];
       const kKey = k._logoKey || k._name.toLowerCase().replace(/[^a-z0-9]/g, '');
       if (key !== kKey) continue;
-      // Same brand — check proximity
-      const p1 = proj.fromLatLngToPoint(ov._anchorPos);
-      const p2 = proj.fromLatLngToPoint(k._anchorPos);
-      const dx = (p1.x - p2.x) * scale;
-      const dy = (p1.y - p2.y) * scale;
-      if (Math.sqrt(dx * dx + dy * dy) < DIST_PX) {
+      // Same brand — check geographic proximity
+      const dist = google.maps.geometry.spherical.computeDistanceBetween(ov._anchorPos, k._anchorPos);
+      if (dist < MIN_DIST) {
         isDup = true;
         break;
       }
@@ -4179,9 +4225,12 @@ function _sweepDuplicateLogos() {
     }
   }
 
-  // Clean up category marker refs
+  // Clean up placedMarkers, category marker refs, and logo count
   if (removed.length > 0) {
     const removedSet = new Set(removed);
+    placedMarkers = placedMarkers.filter(m => !removedSet.has(m));
+    logoCount = Math.max(0, logoCount - removed.length);
+    document.getElementById('logoCount').textContent = logoCount;
     Object.keys(categoryMarkers).forEach(catId => {
       categoryMarkers[catId] = categoryMarkers[catId].filter(ov => !removedSet.has(ov));
       const btn = document.querySelector(`.cat-btn[data-cat-id="${catId}"]`);
