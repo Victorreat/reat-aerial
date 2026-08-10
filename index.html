@@ -1683,6 +1683,9 @@ const SECTORS = {
         { name: "Smoothie King", domain: "smoothieking.com", icon: "🥤" },
         { name: "Crumbl Cookies", domain: "crumblcookies.com", icon: "🍪" },
         { name: "Insomnia Cookies", domain: "insomniacookies.com", icon: "🍪" },
+        { name: "Swensons Drive-In", domain: "swensons.com", icon: "🍔" },
+        { name: "Pulp Juice and Smoothie", domain: "pulpjuiceandsmoothie.com", icon: "🥤" },
+        { name: "Tropical Smoothie Cafe", domain: "tropicalsmoothiecafe.com", icon: "🥤" },
       ],
       "Fast Casual": [
         { name: "Chipotle", domain: "chipotle.com", icon: "🌯" },
@@ -1816,6 +1819,12 @@ const SECTORS = {
         { name: "Splash Car Wash", domain: "splashcarwash.com", icon: "🚿" },
         { name: "Autobell Car Wash", domain: "autobell.com", icon: "🚿" },
         { name: "Hoffman Car Wash", domain: "hoffmancarwash.com", icon: "🚿" },
+        { name: "ModWash", domain: "modwash.com", icon: "🚿" },
+        { name: "Whistle Express", domain: "whistlecarwash.com", icon: "🚿" },
+        { name: "Goo Goo Car Wash", domain: "googoocarwash.com", icon: "🚿" },
+        { name: "Club Car Wash", domain: "clubcarwash.com", icon: "🚿" },
+        { name: "Flying Ace Express", domain: "flyingacecarwash.com", icon: "🚿" },
+        { name: "Flagship Carwash", domain: "flagshipcarwash.com", icon: "🚿" },
       ],
       "Oil Change": [
         { name: "Jiffy Lube", domain: "jiffylube.com", icon: "🔧" },
@@ -2185,9 +2194,9 @@ const SECTOR_SEARCH = {
   "Specialty Box": ["pet store", "petsmart", "petco", "pet supplies plus", "hobby lobby", "michaels craft", "joann fabrics", "barnes noble bookstore", "books a million", "gamestop", "bath body works", "victorias secret", "crate barrel", "west elm", "pottery barn", "williams sonoma", "world market", "ikea", "restoration hardware", "container store"],
   "Dollar / Value": ["dollar general", "dollar tree", "family dollar", "five below", "99 cents store", "ollies bargain outlet", "grocery outlet"],
   "Restaurants": ["restaurant", "fast food", "burger restaurant", "pizza restaurant", "taco restaurant", "chicken restaurant", "sandwich shop", "sub shop", "chinese restaurant", "mexican restaurant", "italian restaurant", "sushi restaurant", "thai restaurant", "seafood restaurant", "steakhouse", "bar and grill", "diner", "wings restaurant", "barbecue restaurant", "mediterranean restaurant", "indian restaurant", "vietnamese restaurant", "pho restaurant", "korean restaurant", "greek restaurant", "japanese restaurant", "ramen restaurant", "cajun restaurant", "breakfast restaurant", "brunch restaurant", "poke bowl", "soul food restaurant", "caribbean restaurant", "food truck", "applebees", "chilis restaurant", "olive garden", "red lobster", "outback steakhouse", "texas roadhouse", "longhorn steakhouse", "buffalo wild wings", "red robin", "dennys", "ihop", "waffle house", "cracker barrel", "golden corral", "cheesecake factory", "tgi fridays", "bjs brewhouse", "cheddars scratch kitchen", "bob evans", "perkins restaurant", "benihana", "pf changs", "bonefish grill", "carrabbas", "yard house", "hooters", "dave and busters"],
-  "QSR / Fast Casual": ["mcdonalds", "burger king", "wendys", "taco bell", "chick fil a", "popeyes", "kfc", "raising canes", "wingstop", "zaxbys", "bojangles", "churchs chicken", "daves hot chicken", "el pollo loco", "pdq restaurant", "slim chickens", "dominos pizza", "pizza hut", "papa johns", "little caesars", "marcos pizza", "jets pizza", "mod pizza", "blaze pizza", "subway", "jimmy johns", "jersey mikes", "firehouse subs", "arbys", "charleys philly steaks", "which wich", "potbelly", "schlotzskys", "mcalister deli", "jason deli", "culvers", "sonic drive in", "whataburger", "jack in the box", "hardees", "carls jr", "steak n shake", "five guys", "shake shack", "smashburger", "freddys frozen custard", "habit burger", "in n out", "white castle", "del taco", "torchys tacos", "panda express", "teriyaki madness", "portillos", "chipotle", "panera bread", "qdoba", "moes southwest grill", "cava restaurant", "sweetgreen", "zoes kitchen", "freshii", "noodles and company", "first watch", "eggs up grill", "corner bakery", "au bon pain", "tropical smoothie", "smoothie king", "jamba juice", "dairy queen", "baskin robbins", "coldstone creamery", "auntie annes", "cinnabon", "wetzels pretzels", "crumbl cookies", "insomnia cookies"],
+  "QSR / Fast Casual": ["mcdonalds", "burger king", "wendys", "taco bell", "chick fil a", "popeyes", "kfc", "raising canes", "wingstop", "zaxbys", "bojangles", "churchs chicken", "daves hot chicken", "el pollo loco", "pdq restaurant", "slim chickens", "dominos pizza", "pizza hut", "papa johns", "little caesars", "marcos pizza", "jets pizza", "mod pizza", "blaze pizza", "subway", "jimmy johns", "jersey mikes", "firehouse subs", "arbys", "charleys philly steaks", "which wich", "potbelly", "schlotzskys", "mcalister deli", "jason deli", "culvers", "sonic drive in", "whataburger", "jack in the box", "hardees", "carls jr", "steak n shake", "five guys", "shake shack", "smashburger", "freddys frozen custard", "habit burger", "in n out", "white castle", "del taco", "torchys tacos", "panda express", "teriyaki madness", "portillos", "chipotle", "panera bread", "qdoba", "moes southwest grill", "cava restaurant", "sweetgreen", "zoes kitchen", "freshii", "noodles and company", "first watch", "eggs up grill", "corner bakery", "au bon pain", "tropical smoothie", "smoothie king", "jamba juice", "dairy queen", "baskin robbins", "coldstone creamery", "auntie annes", "cinnabon", "wetzels pretzels", "crumbl cookies", "insomnia cookies", "swensons", "pulp juice and smoothie", "rallys", "checkers drive in", "cook out restaurant", "wienerschnitzel", "long john silvers", "captain ds", "church chicken", "golden chick", "chester fried chicken", "lee famous recipe", "fazolis", "hungry howies", "hunt brothers pizza", "round table pizza", "mountain mikes pizza", "donatos pizza", "toppers pizza", "hungry howies pizza"],
   "Coffee / Café": ["coffee shop", "starbucks", "dunkin", "cafe bakery", "bagel shop", "dutch bros coffee", "peets coffee", "caribou coffee", "scooters coffee", "7 brew coffee", "black rifle coffee", "black rock coffee", "biggby coffee", "tim hortons", "human bean coffee", "ziggis coffee", "pjs coffee", "gloria jeans coffee", "einstein bagels", "brueggers bagels", "donut shop", "boba tea", "bubble tea"],
-  "Auto": ["gas station", "auto parts store", "car wash", "oil change", "tire shop", "auto repair", "autozone", "oreilly auto", "advance auto parts", "napa auto parts", "jiffy lube", "valvoline", "discount tire", "take 5 oil change", "grease monkey", "firestone auto", "midas auto", "meineke", "pep boys", "goodyear auto", "shell gas station", "bp gas station", "chevron", "exxon", "marathon gas", "sunoco", "citgo", "speedway", "circle k", "7-eleven", "sheetz", "wawa", "kwik trip", "caseys general store", "buc-ees", "racetrac", "mister car wash", "zips car wash", "tommys express car wash", "quick quack car wash", "carmax", "carvana"],
+  "Auto": ["gas station", "auto parts store", "car wash", "oil change", "tire shop", "auto repair", "autozone", "oreilly auto", "advance auto parts", "napa auto parts", "jiffy lube", "valvoline", "discount tire", "take 5 oil change", "grease monkey", "firestone auto", "midas auto", "meineke", "pep boys", "goodyear auto", "shell gas station", "bp gas station", "chevron", "exxon", "marathon gas", "sunoco", "citgo", "speedway", "circle k", "7-eleven", "sheetz", "wawa", "kwik trip", "caseys general store", "buc-ees", "racetrac", "mister car wash", "zips car wash", "tommys express car wash", "quick quack car wash", "carmax", "carvana", "modwash car wash", "tidal wave auto spa", "whistle express car wash", "club car wash", "flying ace express car wash", "flagship carwash", "goo goo car wash", "autobell car wash", "crew carwash", "splash car wash", "hoffman car wash", "delta sonic", "royal car wash", "super star car wash", "imo car wash", "driven brands car wash"],
   "Fitness": ["gym fitness", "planet fitness", "la fitness", "orangetheory fitness", "anytime fitness", "crunch fitness", "24 hour fitness", "golds gym", "ufc gym", "f45 training", "eos fitness", "lifetime fitness", "ymca", "snap fitness", "pure barre", "club pilates", "solidcore"],
   "Health & Beauty": ["hair salon", "nail salon", "med spa", "massage envy", "great clips", "sport clips", "supercuts", "fantastic sams", "hair cuttery", "hand and stone massage", "european wax center", "restore hyper wellness", "ulta beauty", "sephora", "drybar"],
   "Health & Medical": ["pharmacy", "drugstore", "urgent care", "dentist", "chiropractor", "physical therapy", "cvs pharmacy", "walgreens", "rite aid", "afc urgent care", "fastmed urgent care", "minuteclinic", "nextcare urgent care", "medexpress", "concentra"],
@@ -2354,6 +2363,36 @@ function lookupBrand(placeName) {
   return null;
 }
 
+// Generic queries describe a business TYPE — results must match a known brand.
+// Specific brand queries (everything NOT in this set) auto-accept matching results.
+const _GENERIC_QUERIES = new Set([
+  "big box store", "department store", "grocery store", "supermarket", "pet store",
+  "restaurant", "fast food", "burger restaurant", "pizza restaurant", "taco restaurant",
+  "chicken restaurant", "sandwich shop", "sub shop", "chinese restaurant", "mexican restaurant",
+  "italian restaurant", "sushi restaurant", "thai restaurant", "seafood restaurant", "steakhouse",
+  "bar and grill", "diner", "wings restaurant", "barbecue restaurant", "mediterranean restaurant",
+  "indian restaurant", "vietnamese restaurant", "pho restaurant", "korean restaurant",
+  "greek restaurant", "japanese restaurant", "ramen restaurant", "cajun restaurant",
+  "breakfast restaurant", "brunch restaurant", "poke bowl", "soul food restaurant",
+  "caribbean restaurant", "food truck",
+  "coffee shop", "cafe bakery", "bagel shop", "donut shop", "boba tea", "bubble tea",
+  "gas station", "auto parts store", "car wash", "oil change", "tire shop", "auto repair",
+  "gym fitness", "hair salon", "nail salon", "med spa",
+  "pharmacy", "drugstore", "urgent care", "dentist", "chiropractor", "physical therapy",
+  "hospital", "medical center", "emergency room",
+  "school", "high school", "elementary school", "middle school", "university", "college",
+  "bank branch", "credit union", "cell phone store", "paint store",
+  "furniture store", "mattress store", "clothing store", "shoe store",
+  "electronics store", "phone repair", "liquor store", "wine store", "beer store",
+  "post office", "storage facility",
+  "tutoring center", "learning center", "daycare", "childcare", "preschool",
+  "hotel", "motel"
+]);
+
+function _deriveDomain(query) {
+  return query.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
+}
+
 // Hardcoded API key
 const GMAPS_API_KEY = 'AIzaSyADpereQzvBuQoubmpzQOVVIndA7OweDaA';
 
@@ -2377,7 +2416,8 @@ function initMap() {
     mapTypeId: 'hybrid',
     tilt: 0,
     disableDefaultUI: true,
-    gestureHandling: 'greedy'
+    gestureHandling: 'greedy',
+    clickableIcons: false
   });
 
   // ─── Circular Logo Pin Overlay ──────────────────────────────────────────────
@@ -3416,8 +3456,20 @@ function finishDrawing() {
     highlightShapes.forEach(p => p.setEditable(false));
     polygon.setEditable(true);
   });
+  // Double-click polygon to adjust its opacity
+  polygon.addListener('dblclick', (e) => {
+    if (e.domEvent) { e.domEvent.stopPropagation(); e.domEvent.preventDefault(); }
+    const cur = Math.round((polygon.get('fillOpacity') || 0.35) * 100);
+    const val = prompt('Set highlight opacity (0–100%):', cur);
+    if (val === null) return;
+    const pct = Math.max(0, Math.min(100, parseInt(val, 10)));
+    if (isNaN(pct)) return;
+    polygon.setOptions({ fillOpacity: pct / 100 });
+    setStatus(`Highlight opacity set to ${pct}%`);
+    _debounceSave();
+  });
   highlightShapes.push(polygon);
-  setStatus('Highlight added — click it to edit vertices.');
+  setStatus('Highlight added — click to edit, double-click to adjust opacity.');
 }
 
 function undoLastHighlight() {
@@ -3699,8 +3751,19 @@ async function generateAerial() {
                 if (_globalPlaceIds.has(r.place_id)) return;
                 if (!withinRadius(r.geometry.location)) return;
                 const matched = lookupBrand(r.name);
-                if (!isLandmark && !matched) return;
-                const domain = matched ? matched.domain : '';
+                let domain;
+                if (matched) {
+                  domain = matched.domain;
+                } else if (isLandmark) {
+                  domain = '';
+                } else if (!_GENERIC_QUERIES.has(q)) {
+                  const normQ = _normBrand(q);
+                  const normN = _normBrand(r.name);
+                  if (!normN.includes(normQ)) return;
+                  domain = _deriveDomain(q);
+                } else {
+                  return;
+                }
                 if (isDupDomain(domain, r.geometry.location)) return;
                 seenPlaceIds.add(r.place_id);
                 _globalPlaceIds.add(r.place_id);
@@ -3912,15 +3975,27 @@ function toggleCategory(catId) {
     seenDomainLocs.get(domain).push(loc);
   }
 
-  function placeResult(r) {
+  function placeResult(r, query) {
     if (!r.geometry || !r.place_id) return;
     if (seenPlaceIds.has(r.place_id)) return;
-    if (_globalPlaceIds.has(r.place_id)) return; // skip if already placed by another category
-    if (!_withinTradeArea(r.geometry.location)) return; // skip results outside trade area
+    if (_globalPlaceIds.has(r.place_id)) return;
+    if (!_withinTradeArea(r.geometry.location)) return;
     const matched = lookupBrand(r.name);
-    if (!isLandmark && !matched) return; // skip local/unknown for retail categories
-    const domain = matched ? matched.domain : '';
-    if (_isDupDomain(domain, r.geometry.location)) return; // skip same brand within 200m
+    let domain;
+    if (matched) {
+      domain = matched.domain;
+    } else if (isLandmark) {
+      domain = '';
+    } else if (!_GENERIC_QUERIES.has(query)) {
+      // Specific brand query — accept if result name contains the query
+      const normQ = _normBrand(query);
+      const normN = _normBrand(r.name);
+      if (!normN.includes(normQ)) return;
+      domain = _deriveDomain(query);
+    } else {
+      return; // generic query, no brand match — skip
+    }
+    if (_isDupDomain(domain, r.geometry.location)) return;
     seenPlaceIds.add(r.place_id);
     _globalPlaceIds.add(r.place_id);
     _trackDomain(domain, r.geometry.location);
@@ -3940,7 +4015,7 @@ function toggleCategory(catId) {
   queries.forEach(q => {
     function handlePage(results, status, pagination) {
       if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-        results.forEach(placeResult);
+        results.forEach(r => placeResult(r, q));
       }
       if (pagination && pagination.hasNextPage) {
         setTimeout(() => pagination.nextPage(), 500);
@@ -4930,6 +5005,17 @@ function _restoreMapState(state) {
           if (e.domEvent) e.domEvent.stopPropagation();
           highlightShapes.forEach(p => p.setEditable(false));
           polygon.setEditable(true);
+        });
+        polygon.addListener('dblclick', (e) => {
+          if (e.domEvent) { e.domEvent.stopPropagation(); e.domEvent.preventDefault(); }
+          const cur = Math.round((polygon.get('fillOpacity') || 0.35) * 100);
+          const val = prompt('Set highlight opacity (0–100%):', cur);
+          if (val === null) return;
+          const pct = Math.max(0, Math.min(100, parseInt(val, 10)));
+          if (isNaN(pct)) return;
+          polygon.setOptions({ fillOpacity: pct / 100 });
+          setStatus(`Highlight opacity set to ${pct}%`);
+          _debounceSave();
         });
         highlightShapes.push(polygon);
       } catch (e) { /* skip broken highlight */ }
