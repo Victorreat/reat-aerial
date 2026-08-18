@@ -4486,81 +4486,200 @@ function exportPrint(size) {
 
 // ─── SCREEN CAPTURE EXPORT ──────────────────────────────────────────────────
 // Captures EXACTLY what's on screen — map, logos, highlights, radii — landscape
-// Convert a blob to a data URL
-function _blobToDataUrl(blob) {
+
+// Load an image with CORS support via crossOrigin attribute + canvas conversion.
+// This is more reliable than fetch() for converting cross-origin images.
+function _loadImgCORS(src, timeout) {
+  timeout = timeout || 6000;
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const timer = setTimeout(() => { img.src = ''; reject(new Error('timeout')); }, timeout);
+    img.onload = () => { clearTimeout(timer); resolve(img); };
+    img.onerror = () => { clearTimeout(timer); reject(new Error('failed')); };
+    // Cache-buster forces a fresh CORS request (browser may have cached non-CORS response)
+    img.src = src + (src.includes('?') ? '&' : '?') + '_cb=' + Date.now();
   });
 }
 
-// Convert an <img> src to an inline data URL so html2canvas can render it.
-// If conversion fails, hides the image and shows the initial letter fallback instead
-// (html2canvas renders CSS-styled spans reliably, but struggles with broken/cross-origin images).
-async function _imgToDataUrl(img) {
-  if (!img.src || img.src.startsWith('data:')) return;
-  const origSrc = img.src;
-  const pin = img.closest('.lo-pin');
+// Convert a loaded Image to a data URL via canvas
+function _imgToCanvas(img) {
+  const c = document.createElement('canvas');
+  const w = img.naturalWidth || 128;
+  const h = img.naturalHeight || 128;
+  c.width = w; c.height = h;
+  c.getContext('2d').drawImage(img, 0, 0, w, h);
+  return c.toDataURL('image/png');
+}
 
-  // Helper: validate a fetched blob is a real image (not an error page)
-  function _isValidImage(blob) {
-    return blob && blob.size > 100 && blob.type && blob.type.startsWith('image/');
+// Load an image for export, trying multiple sources. Returns a loaded Image or null.
+async function _loadExportImage(src) {
+  if (!src) return null;
+
+  // Already a data URL — load directly
+  if (src.startsWith('data:')) {
+    try { return await _loadImgCORS(src, 3000); } catch { return null; }
   }
 
-  // Helper: try to fetch and convert to data URL
-  async function _tryFetch(url) {
-    const resp = await fetch(url, { mode: 'cors' });
-    if (!resp.ok) return null;
-    const blob = await resp.blob();
-    if (!_isValidImage(blob)) return null;
-    return await _blobToDataUrl(blob);
-  }
+  // 1. Try direct CORS load from logo.dev / original source
+  try {
+    const img = await _loadImgCORS(src);
+    // Verify canvas isn't tainted by trying toDataURL
+    _imgToCanvas(img);
+    return img;
+  } catch {}
 
-  // Try multiple sources to get a data URL
-  let dataUrl = null;
+  // 2. Try weserv.nl image proxy (reliable, CORS-enabled)
+  try {
+    const proxyUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(src) + '&w=128&h=128&output=png';
+    return await _loadImgCORS(proxyUrl);
+  } catch {}
 
-  // 1. Direct CORS fetch
-  try { dataUrl = await _tryFetch(origSrc); } catch {}
+  // 3. Try corsproxy.io
+  try {
+    return await _loadImgCORS('https://corsproxy.io/?' + encodeURIComponent(src));
+  } catch {}
 
-  // 2. CORS image proxy (weserv.nl)
-  if (!dataUrl) {
-    try {
-      dataUrl = await _tryFetch('https://images.weserv.nl/?url=' + encodeURIComponent(origSrc) + '&w=128&h=128&fit=contain&output=png');
-    } catch {}
-  }
+  return null;
+}
 
-  // 3. Alternative proxy
-  if (!dataUrl) {
-    try {
-      dataUrl = await _tryFetch('https://corsproxy.io/?' + encodeURIComponent(origSrc));
-    } catch {}
-  }
+// Draw all logos directly onto a canvas at their correct positions.
+// This BYPASSES html2canvas for logos — html2canvas can't reliably render cross-origin images.
+async function _drawLogosOnCanvas(ctx, logoPins, containerRect, layoutW, layoutH, TW, mapH) {
+  const scaleX = TW / layoutW;
+  const scaleY = mapH / layoutH;
 
-  if (dataUrl) {
-    // SUCCESS — replace image src with inline data URL
-    img._origSrc = origSrc;
-    img.src = dataUrl;
-    // Wait for the image to actually decode before html2canvas captures
-    try { await img.decode(); } catch {}
-    // If image was previously hidden (failed load), make it visible
-    if (img.style.display === 'none') {
-      img._wasHidden = true;
-      img.style.removeProperty('display');
-      const init = pin?.querySelector('.lo-pin-initial');
-      if (init) init.style.setProperty('display', 'none', 'important');
+  for (const entry of logoPins) {
+    const { pin, rect, imgSrc, noBg, name, hue } = entry;
+
+    // Calculate center position on the final canvas
+    const cx = (rect.left + rect.width / 2 - containerRect.left) * scaleX;
+    const cy = (rect.top + rect.height / 2 - containerRect.top) * scaleY;
+    const pinR = (rect.width / 2) * scaleX;
+    const imgR = pinR * 0.8; // image is 32px in a 40px pin
+
+    // Try to load the actual logo image
+    let loadedImg = null;
+    if (imgSrc) {
+      loadedImg = await _loadExportImage(imgSrc);
     }
-  } else {
-    // ALL FETCHES FAILED — hide the broken image, show the initial letter instead.
-    // html2canvas renders CSS spans (background + text) reliably, unlike broken images.
-    img._origSrc = origSrc;
-    img._wasHidden = true;
-    img.style.setProperty('display', 'none', 'important');
-    const init = pin?.querySelector('.lo-pin-initial');
-    if (init) {
-      init.style.setProperty('display', 'flex', 'important');
+
+    if (loadedImg) {
+      if (noBg) {
+        // No-background mode: draw image without circle background
+        ctx.drawImage(loadedImg, cx - imgR, cy - imgR, imgR * 2, imgR * 2);
+      } else {
+        // Draw white circle background
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, pinR, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 10 * scaleX;
+        ctx.shadowOffsetY = 2 * scaleX;
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        // Draw logo clipped to circle
+        ctx.beginPath();
+        ctx.arc(cx, cy, imgR, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(loadedImg, cx - imgR, cy - imgR, imgR * 2, imgR * 2);
+        ctx.restore();
+      }
+    } else {
+      // Fallback: colored circle with initial letter
+      const letter = (name || '?').charAt(0).toUpperCase();
+      const h = hue || 0;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, pinR, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 10 * scaleX;
+      ctx.shadowOffsetY = 2 * scaleX;
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      // Colored circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, imgR, 0, Math.PI * 2);
+      ctx.fillStyle = `hsl(${h},55%,45%)`;
+      ctx.fill();
+      // Letter
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.round(imgR * 1.2)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(letter, cx, cy + 1);
+      ctx.restore();
     }
+  }
+}
+
+// Draw logo group boxes directly onto the canvas
+async function _drawGroupsOnCanvas(ctx, mapContainer, containerRect, layoutW, layoutH, TW, mapH) {
+  const scaleX = TW / layoutW;
+  const scaleY = mapH / layoutH;
+
+  for (const group of logoGroups) {
+    if (!group._el || group._expanded) continue;
+    const box = group._el.querySelector('.logo-group-box');
+    if (!box) continue;
+    const boxRect = box.getBoundingClientRect();
+    if (boxRect.width === 0 || boxRect.height === 0) continue;
+
+    // Box position on final canvas
+    const bx = (boxRect.left - containerRect.left) * scaleX;
+    const by = (boxRect.top - containerRect.top) * scaleY;
+    const bw = boxRect.width * scaleX;
+    const bh = boxRect.height * scaleY;
+
+    // Draw box background
+    ctx.save();
+    const br = 8 * scaleX;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, br);
+    ctx.fillStyle = 'rgba(240,240,240,0.75)';
+    ctx.fill();
+
+    // Draw each logo in the group
+    const logos = box.querySelectorAll('.group-logo, .group-initial');
+    for (const el of logos) {
+      const elRect = el.getBoundingClientRect();
+      const ex = (elRect.left - containerRect.left) * scaleX;
+      const ey = (elRect.top - containerRect.top) * scaleY;
+      const ew = elRect.width * scaleX;
+      const eh = elRect.height * scaleY;
+      const ecx = ex + ew / 2;
+      const ecy = ey + eh / 2;
+      const er = Math.min(ew, eh) / 2;
+
+      if (el.classList.contains('group-logo') && el.src) {
+        const loadedImg = await _loadExportImage(el.src);
+        if (loadedImg) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(ecx, ecy, er, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(loadedImg, ex, ey, ew, eh);
+          ctx.restore();
+          continue;
+        }
+      }
+      // Fallback: draw initial circle
+      const letter = (el.textContent || '?').trim().charAt(0).toUpperCase();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ecx, ecy, er, 0, Math.PI * 2);
+      ctx.fillStyle = el.style.background || '#6a8a5a';
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.round(er)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(letter, ecx, ecy);
+      ctx.restore();
+    }
+    ctx.restore();
   }
 }
 
@@ -4616,9 +4735,10 @@ async function exportImage(format, size) {
   hideEls.forEach(el => el.style.display = 'none');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse, .logo-group-resize, .logo-group-controls').forEach(el => el.style.setProperty('display','none','important'));
 
-  // Only process VISIBLE pins (skip off-screen for performance)
+  // Collect visible logo pin positions and data BEFORE hiding them.
+  // We'll draw logos directly onto the canvas later (bypassing html2canvas for logos).
   const containerRect = mapContainer.getBoundingClientRect();
-  const logoImgs = [];
+  const logoPins = [];
   mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
     const rect = pin.getBoundingClientRect();
     const visible = rect.right > containerRect.left && rect.left < containerRect.right &&
@@ -4627,49 +4747,51 @@ async function exportImage(format, size) {
       pin.style.setProperty('display','none','important');
       pin._wasOffscreen = true;
     } else {
-      // Force overflow:hidden so html2canvas clips images to the circle
-      pin.style.setProperty('overflow', 'hidden', 'important');
-      pin._hadOverflowInline = true;
-
+      // Get logo source and metadata before hiding
       const img = pin.querySelector('.lo-pin-img');
       const initial = pin.querySelector('.lo-pin-initial');
+      const tooltip = pin.querySelector('.lo-pin-tooltip');
+      const name = tooltip?.textContent || '?';
+      const hue = Math.abs(name.split('').reduce((h,c)=>h+c.charCodeAt(0),0)) % 360;
 
-      // Hide initial if there's a working (visible) image — prevents overlap
-      // If image is hidden (failed load), leave initial visible as the content
-      if (initial && img && img.style.display !== 'none') {
-        initial.style.setProperty('display','none','important');
-      }
-
-      // Collect images for CORS conversion (even hidden ones — _imgToDataUrl will fix them)
-      if (img) logoImgs.push(img);
-
-      // Inline no-bg styles so html2canvas captures them correctly
-      if (pin.classList.contains('no-bg')) {
-        pin.style.setProperty('background', 'transparent', 'important');
-        pin.style.setProperty('border', 'none', 'important');
-        pin.style.setProperty('box-shadow', 'none', 'important');
-        pin._hadNoBgInline = true;
-        if (img) {
-          img.style.setProperty('width', '40px', 'important');
-          img.style.setProperty('height', '40px', 'important');
-          img.style.setProperty('border-radius', '0', 'important');
-          img.style.setProperty('object-fit', 'contain', 'important');
-          img._hadNoBgInline = true;
+      // Determine the best image source
+      let imgSrc = null;
+      if (img) {
+        // Check for uploaded logo in localStorage first
+        const overlay = placedMarkers.find(m => m._el && m._el.contains(pin));
+        if (overlay) {
+          const uploaded = getUploadedLogo(overlay._logoKey);
+          if (uploaded) imgSrc = uploaded;
         }
+        if (!imgSrc) imgSrc = img.src || null;
       }
+
+      logoPins.push({
+        pin,
+        rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+        imgSrc,
+        noBg: pin.classList.contains('no-bg'),
+        name,
+        hue
+      });
     }
   });
 
-  // Also collect group logo images (inside logo-group-box) for CORS conversion
-  mapContainer.querySelectorAll('.logo-group-box .group-logo').forEach(img => logoImgs.push(img));
+  // HIDE all logo pins entirely — we'll draw them on the canvas directly.
+  // This avoids html2canvas cross-origin image issues completely.
+  mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
+    if (!pin._wasOffscreen) {
+      pin.style.setProperty('visibility', 'hidden', 'important');
+      pin._wasExportHidden = true;
+    }
+  });
+  // Also hide group boxes — we'll draw those too
+  mapContainer.querySelectorAll('.logo-group-wrap').forEach(el => {
+    el.style.setProperty('visibility', 'hidden', 'important');
+    el._wasExportHidden = true;
+  });
 
-  setStatus(`Converting ${logoImgs.length} logos for export…`);
-  await Promise.all(logoImgs.map(_imgToDataUrl));
-
-  // Small pause to let any replaced images render in the DOM
-  await new Promise(r => setTimeout(r, 300));
-
-  setStatus('Capturing landscape map — please wait…');
+  setStatus(`Capturing map — ${logoPins.length} logos will be drawn…`);
 
   // Scale factor capped at 2x to prevent freezing
   const scaleFactor = Math.min(2, TW / layoutW);
@@ -4677,7 +4799,7 @@ async function exportImage(format, size) {
   try {
     const canvas = await html2canvas(mapContainer, {
       useCORS: true,
-      allowTaint: false,
+      allowTaint: true,
       width: layoutW,
       height: layoutH,
       scale: scaleFactor,
@@ -4693,8 +4815,8 @@ async function exportImage(format, size) {
     google.maps.event.trigger(map, 'resize');
     map.setCenter(savedCenter);
 
-    // Restore hidden UI
-    _restoreExportUI(hideEls, logoImgs, mapContainer);
+    // Restore hidden UI and logo visibility
+    _restoreExportUI(hideEls, [], mapContainer);
 
     // Build final canvas with branding strip
     const finalCanvas = document.createElement('canvas');
@@ -4702,8 +4824,13 @@ async function exportImage(format, size) {
     finalCanvas.height = TH;
     const ctx = finalCanvas.getContext('2d');
 
-    // Draw captured landscape map
+    // Draw captured landscape map (without logos)
     ctx.drawImage(canvas, 0, 0, TW, mapH);
+
+    // Now draw ACTUAL logos directly onto the canvas — bypasses html2canvas entirely
+    setStatus(`Drawing ${logoPins.length} logos onto export…`);
+    await _drawLogosOnCanvas(ctx, logoPins, containerRect, layoutW, layoutH, TW, mapH);
+    await _drawGroupsOnCanvas(ctx, mapContainer, containerRect, layoutW, layoutH, TW, mapH);
 
     // Branding strip at bottom
     ctx.fillStyle = 'rgba(26,46,26,0.95)';
@@ -4766,7 +4893,7 @@ async function exportImage(format, size) {
     if (sidebar) sidebar.style.display = origSidebarDisplay;
     google.maps.event.trigger(map, 'resize');
     map.setCenter(savedCenter);
-    _restoreExportUI(hideEls, logoImgs, mapContainer);
+    _restoreExportUI(hideEls, [], mapContainer);
     console.error('Export error:', err);
     setStatus('Export failed — use PDF print instead');
   }
@@ -4776,45 +4903,15 @@ function _restoreExportUI(hideEls, logoImgs, mapContainer) {
   hideEls.forEach(el => el.style.display = '');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse, .logo-group-resize, .logo-group-controls').forEach(el => el.style.removeProperty('display'));
 
-  // Restore off-screen pins, overflow, and no-bg inline overrides
+  // Restore logo pin visibility
   mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
     if (pin._wasOffscreen) { pin.style.removeProperty('display'); delete pin._wasOffscreen; }
-    if (pin._hadOverflowInline) { pin.style.removeProperty('overflow'); delete pin._hadOverflowInline; }
-    if (pin._hadNoBgInline) {
-      pin.style.removeProperty('background');
-      pin.style.removeProperty('border');
-      pin.style.removeProperty('box-shadow');
-      delete pin._hadNoBgInline;
-      const img = pin.querySelector('.lo-pin-img');
-      if (img && img._hadNoBgInline) {
-        img.style.removeProperty('width');
-        img.style.removeProperty('height');
-        img.style.removeProperty('border-radius');
-        img.style.removeProperty('object-fit');
-        delete img._hadNoBgInline;
-      }
-    }
+    if (pin._wasExportHidden) { pin.style.removeProperty('visibility'); delete pin._wasExportHidden; }
   });
 
-  // Restore images to their original state
-  logoImgs.forEach(img => {
-    if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
-    if (img._wasHidden) {
-      // Restore to pre-export state: image hidden, initial visible
-      img.style.display = 'none';
-      const init = img.closest('.lo-pin')?.querySelector('.lo-pin-initial');
-      if (init) init.style.removeProperty('display');
-      delete img._wasHidden;
-    }
-  });
-
-  // Re-show all initials that should be visible (those without a working image)
-  mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => {
-    const pin = el.closest('.lo-pin');
-    const img = pin?.querySelector('.lo-pin-img');
-    if (!img || img.style.display === 'none') {
-      el.style.removeProperty('display');
-    }
+  // Restore logo group visibility
+  mapContainer.querySelectorAll('.logo-group-wrap').forEach(el => {
+    if (el._wasExportHidden) { el.style.removeProperty('visibility'); delete el._wasExportHidden; }
   });
 }
 
