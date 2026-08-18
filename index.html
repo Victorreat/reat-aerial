@@ -4466,14 +4466,27 @@ async function _imgToDataUrl(img) {
   if (!img.src || img.src.startsWith('data:')) return;
   const origSrc = img.src;
 
+  // Track if image was hidden (e.g. logo.dev failed, showing initial instead)
+  const wasHidden = img.style.display === 'none';
+  if (wasHidden) img._wasHidden = true;
+  const pin = img.closest('.lo-pin');
+
   // 1. Try direct fetch with CORS
   try {
     const resp = await fetch(origSrc, { mode: 'cors' });
     if (resp.ok) {
-      const dataUrl = await _blobToDataUrl(await resp.blob());
-      img._origSrc = origSrc;
-      img.src = dataUrl;
-      return;
+      const blob = await resp.blob();
+      if (blob.type.startsWith('image/') && blob.size > 100) {
+        const dataUrl = await _blobToDataUrl(blob);
+        img._origSrc = origSrc;
+        img.src = dataUrl;
+        if (wasHidden) {
+          img.style.removeProperty('display');
+          const init = pin?.querySelector('.lo-pin-initial');
+          if (init) init.style.setProperty('display','none','important');
+        }
+        return;
+      }
     }
   } catch {}
 
@@ -4482,15 +4495,22 @@ async function _imgToDataUrl(img) {
     const proxyUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(origSrc) + '&w=64&h=64&fit=contain';
     const resp = await fetch(proxyUrl, { mode: 'cors' });
     if (resp.ok) {
-      const dataUrl = await _blobToDataUrl(await resp.blob());
-      img._origSrc = origSrc;
-      img.src = dataUrl;
-      return;
+      const blob = await resp.blob();
+      if (blob.type.startsWith('image/') && blob.size > 100) {
+        const dataUrl = await _blobToDataUrl(blob);
+        img._origSrc = origSrc;
+        img.src = dataUrl;
+        if (wasHidden) {
+          img.style.removeProperty('display');
+          const init = pin?.querySelector('.lo-pin-initial');
+          if (init) init.style.setProperty('display','none','important');
+        }
+        return;
+      }
     }
   } catch {}
 
   // 3. Last resort — generate a simple colored circle with initial letter as data URL
-  const pin = img.closest('.lo-pin');
   let name = '?';
   if (pin) {
     name = pin.querySelector('.lo-pin-tooltip')?.textContent || '?';
@@ -4510,6 +4530,11 @@ async function _imgToDataUrl(img) {
   cx.fillText(letter, 32, 34);
   img._origSrc = img.src;
   img.src = c.toDataURL();
+  if (wasHidden) {
+    img.style.removeProperty('display');
+    const init = pin?.querySelector('.lo-pin-initial');
+    if (init) init.style.setProperty('display','none','important');
+  }
 }
 
 // A3 landscape 200dpi = 3307×2339, A4 landscape 200dpi = 2339×1654
@@ -4564,8 +4589,15 @@ async function exportImage(format, size) {
   hideEls.forEach(el => el.style.display = 'none');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse, .logo-group-resize, .logo-group-controls').forEach(el => el.style.setProperty('display','none','important'));
 
-  // Hide ALL initial-letter placeholders first — they cause black circles and overlap
-  mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => el.style.setProperty('display','none','important'));
+  // Hide initial-letter placeholders only for pins that have a working image
+  // (pins without an image need their initial visible for the export)
+  mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
+    const img = pin.querySelector('.lo-pin-img');
+    const initial = pin.querySelector('.lo-pin-initial');
+    if (initial && img && img.style.display !== 'none') {
+      initial.style.setProperty('display','none','important');
+    }
+  });
 
   // Only process VISIBLE pins (skip off-screen for performance)
   const containerRect = mapContainer.getBoundingClientRect();
