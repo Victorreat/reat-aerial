@@ -2582,6 +2582,13 @@ function initMap() {
         this._elParent = el.parentNode;
         el.parentNode.removeChild(el);
       }
+      // Apply deferred restore state (from saved map load — _el wasn't ready before)
+      if (this._pendingRestore) {
+        if (this._pendingRestore.noBg) { pin.classList.add('no-bg'); }
+        if (this._pendingRestore.customScale) { this._customScale = this._pendingRestore.customScale; }
+        delete this._pendingRestore;
+        this.draw(); // redraw with restored scale
+      }
     }
     _getResizeTargets() {
       const selected = placedMarkers.filter(m => m._selected && m._pin);
@@ -3123,6 +3130,15 @@ function initMap() {
       e.latLng.lat().toFixed(5) + ', ' + e.latLng.lng().toFixed(5);
   });
 
+  // Sync zoom slider when user scrolls or map zoom changes
+  map.addListener('zoom_changed', () => {
+    const z = map.getZoom();
+    const slider = document.getElementById('zoomSlider');
+    if (slider) { slider.value = z; }
+    const val = document.getElementById('zoomVal');
+    if (val) { val.textContent = Math.round(z); }
+  });
+
   // Click map to deselect any editable highlight polygons
   map.addListener('click', () => {
     highlightShapes.forEach(p => p.setEditable(false));
@@ -3328,6 +3344,7 @@ function updateOpacity(val) {
 function startDrawing() {
   if (!map) return;
   if (drawMode) cancelDrawing();
+  if (_placeMode) exitPlaceMode(); // exit place mode when entering draw mode
   drawMode = true;
   drawPoints = [];
   drawVertexMarkers = [];
@@ -3476,6 +3493,7 @@ function undoLastHighlight() {
   if (highlightShapes.length === 0) return;
   const last = highlightShapes.pop();
   last.setMap(null);
+  _debounceSave();
 }
 
 // ─── SELECT & ENLARGE TOOL ────────────────────────────────────────────────────
@@ -4057,7 +4075,7 @@ function addCustomBrand() {
   const domainEl = document.getElementById('customBrandDomain');
   const name = nameEl.value.trim();
   if (!name) { nameEl.focus(); return; }
-  const domain = domainEl.value.trim().replace(/^https?:\/\//,'');
+  const domain = domainEl.value.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,''); // strip path, keep domain only
   if (!map) return;
   _dropLogoPin(map.getCenter(), name, domain);
   setStatus(`"${name}" placed at map center — drag to reposition`);
@@ -4075,6 +4093,7 @@ function togglePlaceMode() {
   const name = nameEl.value.trim();
   if (!name) { nameEl.focus(); setStatus('Enter a label first'); return; }
   if (!map) return;
+  if (drawMode) cancelDrawing(); // exit draw mode when entering place mode
   _placeMode = true;
   const plBtn = document.getElementById('placeLogoBtn');
   plBtn.classList.add('active');
@@ -4082,11 +4101,11 @@ function togglePlaceMode() {
   document.querySelector('.map-container').classList.add('place-mode');
   setStatus('Click on the map to place "' + name + '" — ESC to cancel');
   _placeModeListener = map.addListener('click', (e) => {
+    if (drawMode) return; // safety: don't place if draw mode somehow active
     const nameEl2 = document.getElementById('customBrandName');
     const domainEl = document.getElementById('customBrandDomain');
-    const n = nameEl2.value.trim();
-    if (!n) { exitPlaceMode(); return; }
-    const d = domainEl.value.trim().replace(/^https?:\/\//,'');
+    const n = nameEl2.value.trim() || name; // fall back to original name
+    const d = domainEl.value.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,''); // strip path, keep domain only
     _dropLogoPin(e.latLng, n, d);
     setStatus(`"${n}" placed — click again to place another, ESC to stop`);
   });
@@ -4465,76 +4484,78 @@ function _blobToDataUrl(blob) {
 async function _imgToDataUrl(img) {
   if (!img.src || img.src.startsWith('data:')) return;
   const origSrc = img.src;
+  const pin = img.closest('.lo-pin');
 
-  // Track if image was hidden (e.g. logo.dev failed, showing initial instead)
+  // Track if image was hidden (e.g. logo.dev image failed, initial letter shown instead)
   const wasHidden = img.style.display === 'none';
   if (wasHidden) img._wasHidden = true;
-  const pin = img.closest('.lo-pin');
+
+  // Helper: apply a valid data URL and make the image visible
+  function _applyDataUrl(dataUrl) {
+    img._origSrc = origSrc;
+    img.src = dataUrl;
+    // If image was hidden (failed load), make it visible now that we have inline data
+    if (wasHidden) {
+      img.style.removeProperty('display');
+      const init = pin?.querySelector('.lo-pin-initial');
+      if (init) init.style.setProperty('display','none','important');
+    }
+  }
+
+  // Helper: validate a fetched blob is a real image
+  function _isValidImage(blob) {
+    return blob && blob.size > 100 && blob.type && blob.type.startsWith('image/');
+  }
 
   // 1. Try direct fetch with CORS
   try {
     const resp = await fetch(origSrc, { mode: 'cors' });
     if (resp.ok) {
       const blob = await resp.blob();
-      if (blob.type.startsWith('image/') && blob.size > 100) {
-        const dataUrl = await _blobToDataUrl(blob);
-        img._origSrc = origSrc;
-        img.src = dataUrl;
-        if (wasHidden) {
-          img.style.removeProperty('display');
-          const init = pin?.querySelector('.lo-pin-initial');
-          if (init) init.style.setProperty('display','none','important');
-        }
-        return;
-      }
+      if (_isValidImage(blob)) { _applyDataUrl(await _blobToDataUrl(blob)); return; }
     }
   } catch {}
 
-  // 2. Try via CORS image proxy (handles logo.dev, Google favicons, etc.)
+  // 2. Try via CORS image proxy
   try {
-    const proxyUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(origSrc) + '&w=64&h=64&fit=contain';
+    const proxyUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(origSrc) + '&w=128&h=128&fit=contain&output=png';
     const resp = await fetch(proxyUrl, { mode: 'cors' });
     if (resp.ok) {
       const blob = await resp.blob();
-      if (blob.type.startsWith('image/') && blob.size > 100) {
-        const dataUrl = await _blobToDataUrl(blob);
-        img._origSrc = origSrc;
-        img.src = dataUrl;
-        if (wasHidden) {
-          img.style.removeProperty('display');
-          const init = pin?.querySelector('.lo-pin-initial');
-          if (init) init.style.setProperty('display','none','important');
-        }
-        return;
-      }
+      if (_isValidImage(blob)) { _applyDataUrl(await _blobToDataUrl(blob)); return; }
     }
   } catch {}
 
-  // 3. Last resort — generate a simple colored circle with initial letter as data URL
+  // 3. Try alternative proxy
+  try {
+    const proxyUrl2 = 'https://corsproxy.io/?' + encodeURIComponent(origSrc);
+    const resp = await fetch(proxyUrl2, { mode: 'cors' });
+    if (resp.ok) {
+      const blob = await resp.blob();
+      if (_isValidImage(blob)) { _applyDataUrl(await _blobToDataUrl(blob)); return; }
+    }
+  } catch {}
+
+  // 4. Last resort — generate a colored circle with initial letter
   let name = '?';
   if (pin) {
     name = pin.querySelector('.lo-pin-tooltip')?.textContent || '?';
   } else {
-    // Group logo — try to find name from alt or data attributes
     name = img.alt || img.title || '?';
   }
   const letter = name.charAt(0).toUpperCase();
   const c = document.createElement('canvas');
-  c.width = 64; c.height = 64;
+  c.width = 128; c.height = 128;
   const cx = c.getContext('2d');
-  cx.fillStyle = '#6a8a5a';
-  cx.beginPath(); cx.arc(32, 32, 32, 0, Math.PI * 2); cx.fill();
+  // Use a hue derived from the name for variety
+  const hue = Math.abs(name.split('').reduce((h,ch)=>h+ch.charCodeAt(0),0)) % 360;
+  cx.fillStyle = `hsl(${hue},55%,45%)`;
+  cx.beginPath(); cx.arc(64, 64, 64, 0, Math.PI * 2); cx.fill();
   cx.fillStyle = '#fff';
-  cx.font = 'bold 32px sans-serif';
+  cx.font = 'bold 60px sans-serif';
   cx.textAlign = 'center'; cx.textBaseline = 'middle';
-  cx.fillText(letter, 32, 34);
-  img._origSrc = img.src;
-  img.src = c.toDataURL();
-  if (wasHidden) {
-    img.style.removeProperty('display');
-    const init = pin?.querySelector('.lo-pin-initial');
-    if (init) init.style.setProperty('display','none','important');
-  }
+  cx.fillText(letter, 64, 68);
+  _applyDataUrl(c.toDataURL());
 }
 
 // A3 landscape 200dpi = 3307×2339, A4 landscape 200dpi = 2339×1654
@@ -4589,16 +4610,6 @@ async function exportImage(format, size) {
   hideEls.forEach(el => el.style.display = 'none');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse, .logo-group-resize, .logo-group-controls').forEach(el => el.style.setProperty('display','none','important'));
 
-  // Hide initial-letter placeholders only for pins that have a working image
-  // (pins without an image need their initial visible for the export)
-  mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
-    const img = pin.querySelector('.lo-pin-img');
-    const initial = pin.querySelector('.lo-pin-initial');
-    if (initial && img && img.style.display !== 'none') {
-      initial.style.setProperty('display','none','important');
-    }
-  });
-
   // Only process VISIBLE pins (skip off-screen for performance)
   const containerRect = mapContainer.getBoundingClientRect();
   const logoImgs = [];
@@ -4613,8 +4624,19 @@ async function exportImage(format, size) {
       // Force overflow:hidden so html2canvas clips images to the circle
       pin.style.setProperty('overflow', 'hidden', 'important');
       pin._hadOverflowInline = true;
+
       const img = pin.querySelector('.lo-pin-img');
+      const initial = pin.querySelector('.lo-pin-initial');
+
+      // Hide initial if there's a working (visible) image — prevents overlap
+      // If image is hidden (failed load), leave initial visible as the content
+      if (initial && img && img.style.display !== 'none') {
+        initial.style.setProperty('display','none','important');
+      }
+
+      // Collect images for CORS conversion (even hidden ones — _imgToDataUrl will fix them)
       if (img) logoImgs.push(img);
+
       // Inline no-bg styles so html2canvas captures them correctly
       if (pin.classList.contains('no-bg')) {
         pin.style.setProperty('background', 'transparent', 'important');
@@ -4745,15 +4767,7 @@ async function exportImage(format, size) {
 function _restoreExportUI(hideEls, logoImgs, mapContainer) {
   hideEls.forEach(el => el.style.display = '');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse, .logo-group-resize, .logo-group-controls').forEach(el => el.style.removeProperty('display'));
-  // Only re-show initials that were visible before export (skip pins with working images)
-  mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => {
-    const pin = el.closest('.lo-pin');
-    const img = pin?.querySelector('.lo-pin-img');
-    // Only show initial if there's no image or image is hidden
-    if (!img || img.style.display === 'none') {
-      el.style.removeProperty('display');
-    }
-  });
+
   // Restore off-screen pins, overflow, and no-bg inline overrides
   mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
     if (pin._wasOffscreen) { pin.style.removeProperty('display'); delete pin._wasOffscreen; }
@@ -4773,13 +4787,25 @@ function _restoreExportUI(hideEls, logoImgs, mapContainer) {
       }
     }
   });
+
+  // Restore images to their original state
   logoImgs.forEach(img => {
     if (img._origSrc) { img.src = img._origSrc; delete img._origSrc; }
     if (img._wasHidden) {
-      img.style.removeProperty('display');
+      // Restore to pre-export state: image hidden, initial visible
+      img.style.display = 'none';
       const init = img.closest('.lo-pin')?.querySelector('.lo-pin-initial');
       if (init) init.style.removeProperty('display');
       delete img._wasHidden;
+    }
+  });
+
+  // Re-show all initials that should be visible (those without a working image)
+  mapContainer.querySelectorAll('.lo-pin-initial').forEach(el => {
+    const pin = el.closest('.lo-pin');
+    const img = pin?.querySelector('.lo-pin-img');
+    if (!img || img.style.display === 'none') {
+      el.style.removeProperty('display');
     }
   });
 }
@@ -4985,14 +5011,16 @@ function _restoreMapState(state) {
         }
         const ov = _dropLogoPin(anchorLatLng, l.name, domain);
         if (ov) {
+          // Store saved state on the overlay — will be applied when onAdd fires
           if (l.customScale) ov._customScale = l.customScale;
-          if (l.noBg) { ov._noBg = true; const p = ov._el?.querySelector('.lo-pin'); if (p) p.classList.add('no-bg'); }
+          if (l.noBg) ov._noBg = true;
           const dx = Math.abs(l.pos.lat - l.anchor.lat);
           const dy = Math.abs(l.pos.lng - l.anchor.lng);
           if (dx > 0.000001 || dy > 0.000001) {
             ov._pos = new google.maps.LatLng(l.pos.lat, l.pos.lng);
           }
-          ov.draw();
+          // _el may not exist yet (onAdd is async), so defer DOM updates
+          ov._pendingRestore = { noBg: !!l.noBg, customScale: l.customScale || null };
         }
       } catch (e) { /* skip broken entry */ }
     });
