@@ -444,7 +444,7 @@
     cursor: pointer; transition: background 0.15s;
   }
   .saved-map-item:hover { background: rgba(186,140,54,0.12); }
-  .saved-map-name { flex: 1; font-size: 11px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .saved-map-name { flex: 1; font-size: 11px; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .saved-map-date { font-size: 9px; color: var(--text-muted); font-family: 'DM Mono', monospace; white-space: nowrap; }
   .saved-map-del { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 0 2px; opacity: 0; transition: opacity 0.15s; }
   .saved-map-item:hover .saved-map-del { opacity: 1; }
@@ -2551,14 +2551,18 @@ function initMap() {
         targets.forEach(ov => { ov._customScale = 1; ov.draw(); });
         _debounceSave();
       });
-      document.addEventListener('mousemove', e => {
+      const onResizeMove = e => {
         if (!resizing) return;
         const dy = rStartY - e.clientY; // drag up = bigger
         rStartScales.forEach(({ ov, scale }) => {
           ov._customScale = Math.min(4, Math.max(0.3, scale + dy / 80));
           ov.draw();
         });
-      });
+      };
+      document.addEventListener('mousemove', onResizeMove);
+
+      // Store references for cleanup in onRemove
+      this._docListeners = { onMove, onUp, onResizeMove };
       this._pin = pin;
       this._el = el;
 
@@ -2660,6 +2664,13 @@ function initMap() {
       this.draw();
     }
     onRemove() {
+      // Clean up document-level event listeners to prevent memory leaks
+      if (this._docListeners) {
+        document.removeEventListener('mousemove', this._docListeners.onMove);
+        document.removeEventListener('mouseup', this._docListeners.onUp);
+        document.removeEventListener('mousemove', this._docListeners.onResizeMove);
+        this._docListeners = null;
+      }
       if (this._el) { this._el.parentNode && this._el.parentNode.removeChild(this._el); this._el=null; }
       if (this._line) { this._line.setMap(null); this._line=null; }
       if (this._dot) { this._dot.setMap(null); this._dot=null; }
@@ -3485,6 +3496,11 @@ function finishDrawing() {
     setStatus(`Highlight opacity set to ${pct}%`);
     _debounceSave();
   });
+  // Save when user drags polygon vertices
+  const path = polygon.getPath();
+  google.maps.event.addListener(path, 'set_at', () => _debounceSave());
+  google.maps.event.addListener(path, 'insert_at', () => _debounceSave());
+  google.maps.event.addListener(path, 'remove_at', () => _debounceSave());
   highlightShapes.push(polygon);
   setStatus('Highlight added — click to edit, double-click to adjust opacity.');
 }
@@ -4480,82 +4496,72 @@ function _blobToDataUrl(blob) {
   });
 }
 
-// Convert an <img> src to an inline data URL so html2canvas can render it
+// Convert an <img> src to an inline data URL so html2canvas can render it.
+// If conversion fails, hides the image and shows the initial letter fallback instead
+// (html2canvas renders CSS-styled spans reliably, but struggles with broken/cross-origin images).
 async function _imgToDataUrl(img) {
   if (!img.src || img.src.startsWith('data:')) return;
   const origSrc = img.src;
   const pin = img.closest('.lo-pin');
 
-  // Track if image was hidden (e.g. logo.dev image failed, initial letter shown instead)
-  const wasHidden = img.style.display === 'none';
-  if (wasHidden) img._wasHidden = true;
-
-  // Helper: apply a valid data URL and make the image visible
-  function _applyDataUrl(dataUrl) {
-    img._origSrc = origSrc;
-    img.src = dataUrl;
-    // If image was hidden (failed load), make it visible now that we have inline data
-    if (wasHidden) {
-      img.style.removeProperty('display');
-      const init = pin?.querySelector('.lo-pin-initial');
-      if (init) init.style.setProperty('display','none','important');
-    }
-  }
-
-  // Helper: validate a fetched blob is a real image
+  // Helper: validate a fetched blob is a real image (not an error page)
   function _isValidImage(blob) {
     return blob && blob.size > 100 && blob.type && blob.type.startsWith('image/');
   }
 
-  // 1. Try direct fetch with CORS
-  try {
-    const resp = await fetch(origSrc, { mode: 'cors' });
-    if (resp.ok) {
-      const blob = await resp.blob();
-      if (_isValidImage(blob)) { _applyDataUrl(await _blobToDataUrl(blob)); return; }
-    }
-  } catch {}
-
-  // 2. Try via CORS image proxy
-  try {
-    const proxyUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(origSrc) + '&w=128&h=128&fit=contain&output=png';
-    const resp = await fetch(proxyUrl, { mode: 'cors' });
-    if (resp.ok) {
-      const blob = await resp.blob();
-      if (_isValidImage(blob)) { _applyDataUrl(await _blobToDataUrl(blob)); return; }
-    }
-  } catch {}
-
-  // 3. Try alternative proxy
-  try {
-    const proxyUrl2 = 'https://corsproxy.io/?' + encodeURIComponent(origSrc);
-    const resp = await fetch(proxyUrl2, { mode: 'cors' });
-    if (resp.ok) {
-      const blob = await resp.blob();
-      if (_isValidImage(blob)) { _applyDataUrl(await _blobToDataUrl(blob)); return; }
-    }
-  } catch {}
-
-  // 4. Last resort — generate a colored circle with initial letter
-  let name = '?';
-  if (pin) {
-    name = pin.querySelector('.lo-pin-tooltip')?.textContent || '?';
-  } else {
-    name = img.alt || img.title || '?';
+  // Helper: try to fetch and convert to data URL
+  async function _tryFetch(url) {
+    const resp = await fetch(url, { mode: 'cors' });
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    if (!_isValidImage(blob)) return null;
+    return await _blobToDataUrl(blob);
   }
-  const letter = name.charAt(0).toUpperCase();
-  const c = document.createElement('canvas');
-  c.width = 128; c.height = 128;
-  const cx = c.getContext('2d');
-  // Use a hue derived from the name for variety
-  const hue = Math.abs(name.split('').reduce((h,ch)=>h+ch.charCodeAt(0),0)) % 360;
-  cx.fillStyle = `hsl(${hue},55%,45%)`;
-  cx.beginPath(); cx.arc(64, 64, 64, 0, Math.PI * 2); cx.fill();
-  cx.fillStyle = '#fff';
-  cx.font = 'bold 60px sans-serif';
-  cx.textAlign = 'center'; cx.textBaseline = 'middle';
-  cx.fillText(letter, 64, 68);
-  _applyDataUrl(c.toDataURL());
+
+  // Try multiple sources to get a data URL
+  let dataUrl = null;
+
+  // 1. Direct CORS fetch
+  try { dataUrl = await _tryFetch(origSrc); } catch {}
+
+  // 2. CORS image proxy (weserv.nl)
+  if (!dataUrl) {
+    try {
+      dataUrl = await _tryFetch('https://images.weserv.nl/?url=' + encodeURIComponent(origSrc) + '&w=128&h=128&fit=contain&output=png');
+    } catch {}
+  }
+
+  // 3. Alternative proxy
+  if (!dataUrl) {
+    try {
+      dataUrl = await _tryFetch('https://corsproxy.io/?' + encodeURIComponent(origSrc));
+    } catch {}
+  }
+
+  if (dataUrl) {
+    // SUCCESS — replace image src with inline data URL
+    img._origSrc = origSrc;
+    img.src = dataUrl;
+    // Wait for the image to actually decode before html2canvas captures
+    try { await img.decode(); } catch {}
+    // If image was previously hidden (failed load), make it visible
+    if (img.style.display === 'none') {
+      img._wasHidden = true;
+      img.style.removeProperty('display');
+      const init = pin?.querySelector('.lo-pin-initial');
+      if (init) init.style.setProperty('display', 'none', 'important');
+    }
+  } else {
+    // ALL FETCHES FAILED — hide the broken image, show the initial letter instead.
+    // html2canvas renders CSS spans (background + text) reliably, unlike broken images.
+    img._origSrc = origSrc;
+    img._wasHidden = true;
+    img.style.setProperty('display', 'none', 'important');
+    const init = pin?.querySelector('.lo-pin-initial');
+    if (init) {
+      init.style.setProperty('display', 'flex', 'important');
+    }
+  }
 }
 
 // A3 landscape 200dpi = 3307×2339, A4 landscape 200dpi = 2339×1654
@@ -4658,8 +4664,10 @@ async function exportImage(format, size) {
   mapContainer.querySelectorAll('.logo-group-box .group-logo').forEach(img => logoImgs.push(img));
 
   setStatus(`Converting ${logoImgs.length} logos for export…`);
-  // _imgToDataUrl will re-show initials only for images that truly fail
   await Promise.all(logoImgs.map(_imgToDataUrl));
+
+  // Small pause to let any replaced images render in the DOM
+  await new Promise(r => setTimeout(r, 300));
 
   setStatus('Capturing landscape map — please wait…');
 
@@ -4818,6 +4826,8 @@ function copyShareLink() {
   const url = `https://www.google.com/maps/@${c.lat()},${c.lng()},${z}z/data=!3m1!1e3`;
   navigator.clipboard.writeText(url).then(() => {
     setStatus('Map link copied to clipboard');
+  }).catch(() => {
+    setStatus('Could not copy — try manually');
   });
   hideExport();
 }
@@ -5077,6 +5087,11 @@ function _restoreMapState(state) {
           setStatus(`Highlight opacity set to ${pct}%`);
           _debounceSave();
         });
+        // Save when user drags polygon vertices
+        const rPath = polygon.getPath();
+        google.maps.event.addListener(rPath, 'set_at', () => _debounceSave());
+        google.maps.event.addListener(rPath, 'insert_at', () => _debounceSave());
+        google.maps.event.addListener(rPath, 'remove_at', () => _debounceSave());
         highlightShapes.push(polygon);
       } catch (e) { /* skip broken highlight */ }
     });
@@ -5194,10 +5209,11 @@ async function loadSavedMapsList() {
   list.innerHTML = data.map(m => {
     const d = new Date(m.created_at);
     const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+    const safeName = m.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     return `<div class="saved-map-item" onclick="loadMap('${m.id}')">
-      <span class="saved-map-name">${m.name.replace(/</g,'&lt;')}</span>
+      <span class="saved-map-name">${safeName}</span>
       <span class="saved-map-date">${dateStr}</span>
-      <button class="saved-map-del" onclick="event.stopPropagation();deleteMap('${m.id}','${m.name.replace(/'/g,"\\'")}')" title="Delete">×</button>
+      <button class="saved-map-del" onclick="event.stopPropagation();deleteMap('${m.id}','${safeName}')" title="Delete">×</button>
     </div>`;
   }).join('');
 }
