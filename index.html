@@ -2774,7 +2774,7 @@ function initMap() {
       this.getPanes().overlayMouseTarget.appendChild(el);
     }
 
-    _calcLogoLayout(boxWidth) {
+    _calcLogoLayout(boxWidth, boxHeight) {
       const n = this._overlays.length;
       const pad = 12; // 6px padding each side
       const gap = 4;
@@ -2784,14 +2784,26 @@ function initMap() {
       else if (n <= 12) maxLogo = 36;
       else if (n <= 20) maxLogo = 28;
       else maxLogo = 22;
-      maxLogo = Math.min(maxLogo, 80); // absolute max for quality
+      maxLogo = Math.min(maxLogo, 80);
 
+      if (boxWidth && boxHeight) {
+        const availW = boxWidth - pad;
+        const availH = boxHeight - pad;
+        // Try different column counts, pick the one that best fills the box
+        let bestCols = 1, bestSize = 6;
+        for (let c = 1; c <= n; c++) {
+          const rows = Math.ceil(n / c);
+          const sizeByW = Math.floor((availW - (c - 1) * gap) / c);
+          const sizeByH = Math.floor((availH - (rows - 1) * gap) / rows);
+          const sz = Math.min(maxLogo, sizeByW, sizeByH);
+          if (sz >= bestSize) { bestSize = sz; bestCols = c; }
+        }
+        return { cols: bestCols, logoSize: Math.max(6, bestSize), gap };
+      }
       if (boxWidth) {
         const avail = boxWidth - pad;
-        // Try fitting at maxLogo first; if box is smaller, shrink logos
         let cols = Math.max(1, Math.floor((avail + gap) / (maxLogo + gap)));
         let logoSize = Math.min(maxLogo, Math.floor((avail - (cols - 1) * gap) / cols));
-        // If logos would be too small at current cols, reduce columns
         if (logoSize < 8 && cols > 1) {
           cols = Math.max(1, cols - 1);
           logoSize = Math.min(maxLogo, Math.floor((avail - (cols - 1) * gap) / cols));
@@ -2804,7 +2816,7 @@ function initMap() {
     }
 
     _applyBoxSize(box) {
-      const layout = this._calcLogoLayout(this._customWidth);
+      const layout = this._calcLogoLayout(this._customWidth, this._customHeight);
       box.style.setProperty('--logo-size', layout.logoSize + 'px');
       box.style.setProperty('--logo-gap', layout.gap + 'px');
       box.style.setProperty('--header-size', Math.max(8, Math.round(layout.logoSize * 0.4)) + 'px');
