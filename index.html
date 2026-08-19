@@ -4651,7 +4651,11 @@ async function exportFlyer(format) {
 
       if (loadedImg) {
         if (noBg) {
+          // No white bg, but still clip to circle
+          ctx.save();
+          ctx.beginPath(); ctx.arc(cx, cy, imgR, 0, Math.PI * 2); ctx.clip();
           ctx.drawImage(loadedImg, cx - imgR, cy - imgR, imgR * 2, imgR * 2);
+          ctx.restore();
         } else {
           ctx.save();
           ctx.beginPath(); ctx.arc(cx, cy, pinR, 0, Math.PI * 2);
@@ -4887,8 +4891,11 @@ async function _drawLogosOnCanvas(ctx, logoPins, containerRect, layoutW, layoutH
 
     if (loadedImg) {
       if (noBg) {
-        // No-background mode: draw image without circle background
+        // No white bg, but still clip to circle
+        ctx.save();
+        ctx.beginPath(); ctx.arc(cx, cy, imgR, 0, Math.PI * 2); ctx.clip();
         ctx.drawImage(loadedImg, cx - imgR, cy - imgR, imgR * 2, imgR * 2);
+        ctx.restore();
       } else {
         // Draw white circle background
         ctx.save();
