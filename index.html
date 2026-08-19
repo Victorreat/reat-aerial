@@ -5149,8 +5149,9 @@ async function exportImage(format, size) {
 
   setStatus(`Capturing map — ${logoPins.length} logos will be drawn…`);
 
-  // Scale factor — allow up to 3x for high-res exports
-  const scaleFactor = Math.min(3, TW / layoutW);
+  // Scale factor capped at 2x — higher values cause html2canvas to re-fetch
+  // map tiles which fail CORS. Logos are drawn separately at full resolution.
+  const scaleFactor = Math.min(2, TW / layoutW);
 
   try {
     const canvas = await html2canvas(mapContainer, {
