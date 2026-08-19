@@ -4557,12 +4557,9 @@ async function exportFlyer(format) {
   const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator, .place-indicator, .select-indicator, .select-rect');
   hideEls.forEach(el => el.style.display = 'none');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse, .logo-group-resize, .logo-group-controls').forEach(el => el.style.setProperty('display','none','important'));
-  const gmHide = mapContainer.querySelectorAll('.gm-style-cc, .gmnoprint, [rel="noopener"], .gm-bundled-control, .gm-svpc');
-  gmHide.forEach(el => { el._origDisplay = el.style.display; el.style.setProperty('display','none','important'); });
-  // Also hide the bottom bar with terms/report links
-  mapContainer.querySelectorAll('a[href*="maps.google.com"], a[href*="google.com/maps"], div[style*="background-color: rgb(229, 227, 223)"]').forEach(el => {
-    const parent = el.closest('div[style]');
-    if (parent) { parent._origDisplay = parent.style.display; parent.style.setProperty('display','none','important'); }
+  // Hide Google Maps attribution text (small text at bottom of map)
+  mapContainer.querySelectorAll('.gm-style-cc').forEach(el => {
+    el._exportHidden = true; el.style.setProperty('display','none','important');
   });
 
   // Collect logo positions before hiding
@@ -5083,12 +5080,9 @@ async function exportImage(format, size) {
   const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator, .place-indicator, .select-indicator, .select-rect');
   hideEls.forEach(el => el.style.display = 'none');
   document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse, .logo-group-resize, .logo-group-controls').forEach(el => el.style.setProperty('display','none','important'));
-  const gmHide = mapContainer.querySelectorAll('.gm-style-cc, .gmnoprint, [rel="noopener"], .gm-bundled-control, .gm-svpc');
-  gmHide.forEach(el => { el._origDisplay = el.style.display; el.style.setProperty('display','none','important'); });
-  // Also hide the bottom bar with terms/report links
-  mapContainer.querySelectorAll('a[href*="maps.google.com"], a[href*="google.com/maps"], div[style*="background-color: rgb(229, 227, 223)"]').forEach(el => {
-    const parent = el.closest('div[style]');
-    if (parent) { parent._origDisplay = parent.style.display; parent.style.setProperty('display','none','important'); }
+  // Hide Google Maps attribution text (small text at bottom of map)
+  mapContainer.querySelectorAll('.gm-style-cc').forEach(el => {
+    el._exportHidden = true; el.style.setProperty('display','none','important');
   });
 
   // Collect visible logo pin positions and data BEFORE hiding them.
@@ -5272,12 +5266,8 @@ function _restoreExportUI(hideEls, logoImgs, mapContainer) {
   });
 
   // Restore Google Maps attribution elements
-  mapContainer.querySelectorAll('.gm-style-cc, .gmnoprint, [rel="noopener"], .gm-bundled-control, .gm-svpc').forEach(el => {
-    if (el._origDisplay !== undefined) { el.style.display = el._origDisplay; delete el._origDisplay; }
-    else el.style.removeProperty('display');
-  });
-  mapContainer.querySelectorAll('div[style]').forEach(el => {
-    if (el._origDisplay !== undefined) { el.style.display = el._origDisplay; delete el._origDisplay; }
+  mapContainer.querySelectorAll('.gm-style-cc').forEach(el => {
+    if (el._exportHidden) { el.style.removeProperty('display'); delete el._exportHidden; }
   });
 }
 
