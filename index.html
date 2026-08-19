@@ -4489,56 +4489,77 @@ function exportPrint(size) {
 
 // Load an image with CORS support via crossOrigin attribute + canvas conversion.
 // This is more reliable than fetch() for converting cross-origin images.
-function _loadImgCORS(src, timeout) {
-  timeout = timeout || 6000;
+// Fetch an image via URL and return as a blob. Uses AbortController for timeout.
+async function _fetchImgBlob(url, timeout) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeout || 8000);
+  try {
+    const resp = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const blob = await resp.blob();
+    if (!blob.type.startsWith('image') || blob.size < 100) throw new Error('not an image');
+    return blob;
+  } catch (e) { clearTimeout(timer); throw e; }
+}
+
+// Convert a blob to an Image element via object URL (always same-origin, no CORS issues)
+function _blobToImage(blob) {
   return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
     const img = new Image();
-    img.crossOrigin = 'anonymous';
-    const timer = setTimeout(() => { img.src = ''; reject(new Error('timeout')); }, timeout);
-    img.onload = () => { clearTimeout(timer); resolve(img); };
-    img.onerror = () => { clearTimeout(timer); reject(new Error('failed')); };
-    // Cache-buster forces a fresh CORS request (browser may have cached non-CORS response)
-    img.src = src + (src.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('blob load failed')); };
+    img.src = url;
   });
 }
 
-// Convert a loaded Image to a data URL via canvas
-function _imgToCanvas(img) {
-  const c = document.createElement('canvas');
-  const w = img.naturalWidth || 128;
-  const h = img.naturalHeight || 128;
-  c.width = w; c.height = h;
-  c.getContext('2d').drawImage(img, 0, 0, w, h);
-  return c.toDataURL('image/png');
+// Try fetching an image through a proxy and return as Image element
+async function _tryProxy(proxyUrl, timeout) {
+  const blob = await _fetchImgBlob(proxyUrl, timeout || 8000);
+  return await _blobToImage(blob);
 }
 
-// Load an image for export, trying multiple sources. Returns a loaded Image or null.
-async function _loadExportImage(src) {
-  if (!src) return null;
-
-  // Already a data URL — load directly
-  if (src.startsWith('data:')) {
-    try { return await _loadImgCORS(src, 3000); } catch { return null; }
+// Load an image for export, trying multiple sources and proxies.
+// domain: the brand domain (e.g. "gianteagle.com") for constructing logo.dev URLs
+async function _loadExportImage(src, domain) {
+  // Build ordered list of source URLs to try
+  const urls = [];
+  if (domain) {
+    urls.push('https://img.logo.dev/' + domain + '?token=pk_LLZPmSyxQnKo_8UpB07OVA&size=128&format=png');
+  }
+  if (src && !src.startsWith('data:') && !urls.includes(src)) {
+    urls.push(src);
+  }
+  // Google favicon as last resort (at least shows an icon)
+  if (domain) {
+    urls.push('https://www.google.com/s2/favicons?sz=128&domain=' + domain);
   }
 
-  // 1. Try direct CORS load from logo.dev / original source
-  try {
-    const img = await _loadImgCORS(src);
-    // Verify canvas isn't tainted by trying toDataURL
-    _imgToCanvas(img);
-    return img;
-  } catch {}
+  // Data URL — load directly, no proxy needed
+  if (src && src.startsWith('data:')) {
+    try {
+      const img = new Image();
+      return await new Promise((resolve, reject) => {
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+    } catch { return null; }
+  }
 
-  // 2. Try weserv.nl image proxy (reliable, CORS-enabled)
-  try {
-    const proxyUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(src) + '&w=128&h=128&output=png';
-    return await _loadImgCORS(proxyUrl);
-  } catch {}
-
-  // 3. Try corsproxy.io
-  try {
-    return await _loadImgCORS('https://corsproxy.io/?' + encodeURIComponent(src));
-  } catch {}
+  // For each URL, race multiple proxies in parallel
+  for (const url of urls) {
+    try {
+      const weservUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(url) + '&w=128&h=128&output=png';
+      const corsproxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+      // Race: whichever proxy returns first wins
+      return await Promise.any([
+        _tryProxy(weservUrl, 8000),
+        _tryProxy(corsproxyUrl, 8000),
+      ]);
+    } catch {} // AggregateError — all proxies failed for this URL, try next
+  }
 
   return null;
 }
@@ -4549,7 +4570,14 @@ async function _drawLogosOnCanvas(ctx, logoPins, containerRect, layoutW, layoutH
   const scaleX = TW / layoutW;
   const scaleY = mapH / layoutH;
 
-  for (const entry of logoPins) {
+  // Pre-load ALL logo images in parallel (much faster than sequential)
+  const loadPromises = logoPins.map(entry =>
+    _loadExportImage(entry.imgSrc, entry.logoDomain).catch(() => null)
+  );
+  const loadedImages = await Promise.allSettled(loadPromises);
+
+  for (let i = 0; i < logoPins.length; i++) {
+    const entry = logoPins[i];
     const { pin, rect, imgSrc, noBg, name, hue } = entry;
 
     // Calculate center position on the final canvas
@@ -4558,11 +4586,8 @@ async function _drawLogosOnCanvas(ctx, logoPins, containerRect, layoutW, layoutH
     const pinR = (rect.width / 2) * scaleX;
     const imgR = pinR * 0.8; // image is 32px in a 40px pin
 
-    // Try to load the actual logo image
-    let loadedImg = null;
-    if (imgSrc) {
-      loadedImg = await _loadExportImage(imgSrc);
-    }
+    const result = loadedImages[i];
+    const loadedImg = (result.status === 'fulfilled') ? result.value : null;
 
     if (loadedImg) {
       if (noBg) {
@@ -4637,7 +4662,8 @@ async function _drawGroupsOnCanvas(ctx, mapContainer, containerRect, layoutW, la
     ctx.save();
     const br = 8 * scaleX;
     ctx.beginPath();
-    ctx.roundRect(bx, by, bw, bh, br);
+    if (ctx.roundRect) { ctx.roundRect(bx, by, bw, bh, br); }
+    else { ctx.moveTo(bx+br,by); ctx.lineTo(bx+bw-br,by); ctx.quadraticCurveTo(bx+bw,by,bx+bw,by+br); ctx.lineTo(bx+bw,by+bh-br); ctx.quadraticCurveTo(bx+bw,by+bh,bx+bw-br,by+bh); ctx.lineTo(bx+br,by+bh); ctx.quadraticCurveTo(bx,by+bh,bx,by+bh-br); ctx.lineTo(bx,by+br); ctx.quadraticCurveTo(bx,by,bx+br,by); ctx.closePath(); }
     ctx.fillStyle = 'rgba(240,240,240,0.75)';
     ctx.fill();
 
@@ -4654,7 +4680,11 @@ async function _drawGroupsOnCanvas(ctx, mapContainer, containerRect, layoutW, la
       const er = Math.min(ew, eh) / 2;
 
       if (el.classList.contains('group-logo') && el.src) {
-        const loadedImg = await _loadExportImage(el.src);
+        // Extract domain from logo.dev URL if possible
+        let elDomain = null;
+        const dm = el.src.match(/logo\.dev\/([^?/]+)/);
+        if (dm) elDomain = dm[1];
+        const loadedImg = await _loadExportImage(el.src, elDomain);
         if (loadedImg) {
           ctx.save();
           ctx.beginPath();
@@ -4754,22 +4784,22 @@ async function exportImage(format, size) {
       const name = tooltip?.textContent || '?';
       const hue = Math.abs(name.split('').reduce((h,c)=>h+c.charCodeAt(0),0)) % 360;
 
-      // Determine the best image source
+      // Determine image source AND brand domain for export
       let imgSrc = null;
-      if (img) {
-        // Check for uploaded logo in localStorage first
-        const overlay = placedMarkers.find(m => m._el && m._el.contains(pin));
-        if (overlay) {
-          const uploaded = getUploadedLogo(overlay._logoKey);
-          if (uploaded) imgSrc = uploaded;
-        }
-        if (!imgSrc) imgSrc = img.src || null;
+      let logoDomain = null;
+      const overlay = placedMarkers.find(m => m._el && m._el.contains(pin));
+      if (overlay) {
+        logoDomain = overlay._domain || null;
+        const uploaded = getUploadedLogo(overlay._logoKey);
+        if (uploaded) imgSrc = uploaded;
       }
+      if (!imgSrc && img) imgSrc = img.src || null;
 
       logoPins.push({
         pin,
         rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
         imgSrc,
+        logoDomain,
         noBg: pin.classList.contains('no-bg'),
         name,
         hue
