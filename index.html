@@ -1467,8 +1467,15 @@
     <div class="export-opt" onclick="exportImage('png','WIDE')">
       <span class="export-opt-icon">🖼️</span>
       <div class="export-opt-info">
-        <div class="export-opt-title">PNG — Widescreen</div>
-        <div class="export-opt-desc">Ultra-wide presentation format · 2682×1365px</div>
+        <div class="export-opt-title">PNG — Widescreen 4K</div>
+        <div class="export-opt-desc">High-res for presentations & flyers · 3840×2220px</div>
+      </div>
+    </div>
+    <div class="export-opt" onclick="exportImage('png','WIDE-5K')">
+      <span class="export-opt-icon">🖼️</span>
+      <div class="export-opt-info">
+        <div class="export-opt-title">PNG — Widescreen 5K</div>
+        <div class="export-opt-desc">Ultra-high-res for print & retina · 5120×2960px</div>
       </div>
     </div>
     <div class="export-opt" onclick="exportImage('jpg','A3')">
@@ -4714,7 +4721,12 @@ async function _drawGroupsOnCanvas(ctx, mapContainer, containerRect, layoutW, la
 }
 
 // A3 landscape 200dpi = 3307×2339, A4 landscape 200dpi = 2339×1654
-const EXPORT_SIZES = { A3: { w: 3307, h: 2339 }, A4: { w: 2339, h: 1654 }, WIDE: { w: 2682, h: 1365 } };
+const EXPORT_SIZES = {
+  A3:       { w: 3307, h: 2339 },
+  A4:       { w: 2339, h: 1654 },
+  WIDE:     { w: 3840, h: 2220 },   // 4K widescreen (~16:9 + branding)
+  'WIDE-5K':{ w: 5120, h: 2960 },   // 5K ultra-high-res for print/retina
+};
 
 async function exportImage(format, size) {
   if (!map) return;
@@ -4823,8 +4835,8 @@ async function exportImage(format, size) {
 
   setStatus(`Capturing map — ${logoPins.length} logos will be drawn…`);
 
-  // Scale factor capped at 2x to prevent freezing
-  const scaleFactor = Math.min(2, TW / layoutW);
+  // Scale factor — allow up to 3x for high-res exports
+  const scaleFactor = Math.min(3, TW / layoutW);
 
   try {
     const canvas = await html2canvas(mapContainer, {
