@@ -4519,7 +4519,7 @@ async function exportFlyer(format) {
 
   // Canvas dimensions: US Letter landscape 300 DPI
   const TW = 3300, TH = 2550;
-  const FOOTER_H = Math.round(TH * 0.16);  // ~408px footer
+  const FOOTER_H = Math.round(TH * 0.22);  // ~561px footer (matches template)
   const MAP_H = TH - FOOTER_H;             // map fills everything above footer
   const targetAspect = TW / MAP_H;
 
@@ -4667,9 +4667,9 @@ async function exportFlyer(format) {
       }
     }
 
-    // ── FOOTER BAR ──
-    // Gold line at top of footer
-    const goldLineH = Math.round(TH * 0.004);
+    // ── FOOTER BAR (matching REAT flyer template) ──
+    // Gold stripe at top of footer
+    const goldLineH = Math.round(TH * 0.007);
     ctx.fillStyle = GOLD;
     ctx.fillRect(0, TH - FOOTER_H, TW, goldLineH);
 
@@ -4677,51 +4677,54 @@ async function exportFlyer(format) {
     ctx.fillStyle = DARK_GREEN;
     ctx.fillRect(0, TH - FOOTER_H + goldLineH, TW, FOOTER_H - goldLineH);
 
-    const fPad = Math.round(TW * 0.03);
+    const fPad = Math.round(TW * 0.035);
     const footerTop = TH - FOOTER_H + goldLineH;
+    const footerInner = FOOTER_H - goldLineH;
 
-    // Left side: Property address (large)
-    const fAddrSize = Math.round(FOOTER_H * 0.2);
+    // Left side: Property address — large white bold (Avenir 25pt equivalent at 300 DPI)
+    const fAddrSize = Math.round(footerInner * 0.17);
     ctx.font = `900 ${fAddrSize}px ${FONT_HEAVY}`;
     ctx.fillStyle = WHITE;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    const fAddrY = footerTop + Math.round(FOOTER_H * 0.12);
+    const fAddrY = footerTop + Math.round(footerInner * 0.15);
     ctx.fillText(addrLine1, fPad, fAddrY);
-    if (addrLine2) ctx.fillText(addrLine2, fPad, fAddrY + fAddrSize * 1.25);
+    if (addrLine2) ctx.fillText(addrLine2, fPad, fAddrY + fAddrSize * 1.3);
 
     // "AVAILABLE FOR SALE | LEASE" in gold below address
-    const fTagSize = Math.round(FOOTER_H * 0.13);
+    const fTagSize = Math.round(footerInner * 0.11);
     ctx.font = `900 ${fTagSize}px ${FONT_HEAVY}`;
     ctx.fillStyle = GOLD;
-    const fTagY = fAddrY + fAddrSize * (addrLine2 ? 2.7 : 1.5);
+    const fTagY = fAddrY + fAddrSize * (addrLine2 ? 2.9 : 1.6);
     ctx.fillText('AVAILABLE FOR SALE | LEASE', fPad, fTagY);
 
     // Right side: REAT logo badge (rounded rect, taller than wide, inset border)
-    const badgeH = Math.round(FOOTER_H * 0.8);
-    const badgeW = Math.round(badgeH * 0.84); // taller than wide
+    const badgeH = Math.round(footerInner * 0.72);
+    const badgeW = Math.round(badgeH * 0.82);
     const badgeX = TW - fPad - badgeW;
-    const badgeY = footerTop + Math.round((FOOTER_H - goldLineH - badgeH) / 2);
-    const badgeR = Math.round(badgeH * 0.045); // corner radius
+    const badgeY = footerTop + Math.round((footerInner - badgeH) / 2);
+    const badgeR = Math.round(badgeH * 0.04);
 
-    // Gold rounded rectangle
+    // Draw rounded rect helper
+    function _rrect(cx, x, y, w, h, r) {
+      cx.beginPath();
+      if (cx.roundRect) { cx.roundRect(x, y, w, h, r); }
+      else { cx.moveTo(x+r,y); cx.lineTo(x+w-r,y); cx.quadraticCurveTo(x+w,y,x+w,y+r); cx.lineTo(x+w,y+h-r); cx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); cx.lineTo(x+r,y+h); cx.quadraticCurveTo(x,y+h,x,y+h-r); cx.lineTo(x,y+r); cx.quadraticCurveTo(x,y,x+r,y); cx.closePath(); }
+    }
+
+    // Gold rounded rectangle background
     ctx.save();
-    ctx.beginPath();
-    if (ctx.roundRect) { ctx.roundRect(badgeX, badgeY, badgeW, badgeH, badgeR); }
-    else { const r=badgeR,x=badgeX,y=badgeY,w=badgeW,h=badgeH; ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath(); }
+    _rrect(ctx, badgeX, badgeY, badgeW, badgeH, badgeR);
     ctx.fillStyle = GOLD;
     ctx.fill();
     ctx.restore();
 
     // Inset border
-    const inset = Math.round(badgeH * 0.05);
-    const inR = Math.round(badgeR * 0.7);
+    const inset = Math.round(badgeH * 0.04);
     ctx.save();
-    ctx.beginPath();
-    if (ctx.roundRect) { ctx.roundRect(badgeX + inset, badgeY + inset, badgeW - inset * 2, badgeH - inset * 2, inR); }
-    else { const r=inR,x=badgeX+inset,y=badgeY+inset,w=badgeW-inset*2,h=badgeH-inset*2; ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath(); }
+    _rrect(ctx, badgeX + inset, badgeY + inset, badgeW - inset * 2, badgeH - inset * 2, Math.round(badgeR * 0.6));
     ctx.strokeStyle = DARK_GREEN;
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.3;
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.globalAlpha = 1;
@@ -4732,22 +4735,20 @@ async function exportFlyer(format) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // "REAT"
-    const reatSize = Math.round(badgeH * 0.22);
-    ctx.font = `900 ${reatSize}px 'Georgia', serif`;
-    ctx.fillText('REAT', bcx, badgeY + badgeH * 0.28);
+    // "REAT" — large serif
+    ctx.font = `900 ${Math.round(badgeH * 0.2)}px 'Georgia', serif`;
+    ctx.fillText('REAT', bcx, badgeY + badgeH * 0.25);
 
-    // "COMMERCIAL"
-    const comSize = Math.round(badgeH * 0.09);
-    ctx.font = `900 ${comSize}px ${FONT_HEAVY}`;
-    ctx.fillText('COMMERCIAL', bcx, badgeY + badgeH * 0.44);
+    // "COMMERCIAL" — smaller, bold
+    ctx.font = `900 ${Math.round(badgeH * 0.075)}px ${FONT_HEAVY}`;
+    ctx.fillText('COMMERCIAL', bcx, badgeY + badgeH * 0.42);
 
-    // "REAL ESTATE" / "ADVISORY" / "TEAM"
-    const subSize = Math.round(badgeH * 0.075);
-    ctx.font = `900 ${subSize}px ${FONT_HEAVY}`;
-    ctx.fillText('REAL ESTATE', bcx, badgeY + badgeH * 0.60);
-    ctx.fillText('ADVISORY', bcx, badgeY + badgeH * 0.72);
-    ctx.fillText('TEAM', bcx, badgeY + badgeH * 0.84);
+    // "REAL ESTATE" / "ADVISORY" / "TEAM" — stacked
+    const subSize = Math.round(badgeH * 0.065);
+    ctx.font = `700 ${subSize}px ${FONT_HEAVY}`;
+    ctx.fillText('REAL ESTATE', bcx, badgeY + badgeH * 0.58);
+    ctx.fillText('ADVISORY', bcx, badgeY + badgeH * 0.70);
+    ctx.fillText('TEAM', bcx, badgeY + badgeH * 0.82);
 
     // ── OUTPUT ──
     const slug = addr.replace(/[^a-z0-9]/gi, '-').substring(0, 40) || 'export';
