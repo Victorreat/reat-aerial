@@ -1120,6 +1120,7 @@
 </style>
 <link rel="stylesheet" href="https://use.typekit.net/smz3eya.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script
   async
@@ -1436,53 +1437,53 @@
 <div class="export-panel" id="exportPanel">
   <h3>Export Map</h3>
   <div class="export-options">
-    <div class="export-opt" onclick="exportPrint('A3')">
+    <div class="export-opt" onclick="exportFlyer('pdf')">
       <span class="export-opt-icon">📄</span>
       <div class="export-opt-info">
-        <div class="export-opt-title">PDF — A3 Landscape</div>
-        <div class="export-opt-desc">Large aerial print with logos + highlights · Save as PDF</div>
+        <div class="export-opt-title">PDF — REAT Flyer</div>
+        <div class="export-opt-desc">Branded flyer template · Letter landscape 300 DPI</div>
       </div>
     </div>
-    <div class="export-opt" onclick="exportPrint('A4')">
-      <span class="export-opt-icon">📄</span>
+    <div class="export-opt" onclick="exportFlyer('png')">
+      <span class="export-opt-icon">🖼️</span>
       <div class="export-opt-info">
-        <div class="export-opt-title">PDF — A4 Landscape</div>
-        <div class="export-opt-desc">Standard aerial print with logos + highlights · Save as PDF</div>
+        <div class="export-opt-title">PNG — REAT Flyer</div>
+        <div class="export-opt-desc">Branded flyer template · 3300×2550px 300 DPI</div>
       </div>
     </div>
     <div class="export-opt" onclick="exportImage('png','A3')">
       <span class="export-opt-icon">🖼️</span>
       <div class="export-opt-info">
         <div class="export-opt-title">PNG — A3 Landscape</div>
-        <div class="export-opt-desc">High-res aerial with logos + branding · 3307×2339px</div>
+        <div class="export-opt-desc">Print-ready aerial 300 DPI · 4961×3508px</div>
       </div>
     </div>
     <div class="export-opt" onclick="exportImage('png','A4')">
       <span class="export-opt-icon">🖼️</span>
       <div class="export-opt-info">
         <div class="export-opt-title">PNG — A4 Landscape</div>
-        <div class="export-opt-desc">Standard aerial with logos + branding · 2339×1654px</div>
+        <div class="export-opt-desc">Standard aerial 300 DPI · 3508×2480px</div>
       </div>
     </div>
     <div class="export-opt" onclick="exportImage('png','WIDE')">
       <span class="export-opt-icon">🖼️</span>
       <div class="export-opt-info">
         <div class="export-opt-title">PNG — Widescreen 4K</div>
-        <div class="export-opt-desc">High-res for presentations & flyers · 3840×2220px</div>
+        <div class="export-opt-desc">Presentations & pitch decks · 3840×2220px</div>
       </div>
     </div>
     <div class="export-opt" onclick="exportImage('png','WIDE-5K')">
       <span class="export-opt-icon">🖼️</span>
       <div class="export-opt-info">
         <div class="export-opt-title">PNG — Widescreen 5K</div>
-        <div class="export-opt-desc">Ultra-high-res for print & retina · 5120×2960px</div>
+        <div class="export-opt-desc">Ultra-high-res for retina & print · 5120×2960px</div>
       </div>
     </div>
     <div class="export-opt" onclick="exportImage('jpg','A3')">
       <span class="export-opt-icon">📷</span>
       <div class="export-opt-info">
         <div class="export-opt-title">JPEG — A3 Landscape</div>
-        <div class="export-opt-desc">Compressed for emails and sharing · A3 landscape</div>
+        <div class="export-opt-desc">Compressed for emails · 300 DPI</div>
       </div>
     </div>
     <div class="export-opt" onclick="copyShareLink()">
@@ -2791,11 +2792,11 @@ function initMap() {
         let cols = Math.max(1, Math.floor((avail + gap) / (maxLogo + gap)));
         let logoSize = Math.min(maxLogo, Math.floor((avail - (cols - 1) * gap) / cols));
         // If logos would be too small at current cols, reduce columns
-        if (logoSize < 12 && cols > 1) {
+        if (logoSize < 8 && cols > 1) {
           cols = Math.max(1, cols - 1);
           logoSize = Math.min(maxLogo, Math.floor((avail - (cols - 1) * gap) / cols));
         }
-        return { cols, logoSize: Math.max(10, logoSize), gap };
+        return { cols, logoSize: Math.max(6, logoSize), gap };
       }
       // Auto: default columns
       const cols = Math.min(3, n);
@@ -2891,8 +2892,8 @@ function initMap() {
       const onResizeMove = e => {
         if (!resizing) return;
         const dx = e.clientX - rsx, dy = e.clientY - rsy;
-        this._customWidth = Math.max(28, Math.round(rsw + dx));
-        this._customHeight = Math.max(24, Math.round(rsh + dy));
+        this._customWidth = Math.max(16, Math.round(rsw + dx));
+        this._customHeight = Math.max(14, Math.round(rsh + dy));
         this._applyBoxSize(box);
       };
       const onResizeUp = () => {
@@ -4491,6 +4492,294 @@ function exportPrint(size) {
   setStatus(`Print dialog opened — ${size} Landscape · Save as PDF.`);
 }
 
+// ─── REAT FLYER EXPORT ──────────────────────────────────────────────────────
+// Generates a branded flyer matching the REAT Commercial template
+// Header: dark green bar with "AVAILABLE FOR SALE | LEASE" + address
+// Map: aerial capture with logos
+// Footer: gold line + dark green bar with address + REAT logo badge
+
+async function exportFlyer(format) {
+  if (!map) return;
+  hideExport();
+  setStatus('Preparing REAT flyer export…');
+
+  const DARK_GREEN = '#243F0E';
+  const GOLD = '#A17C2D';
+  const WHITE = '#FFFFFF';
+  // Font stack: Avenir LT PRO 85 Heavy → fallbacks
+  const FONT_HEAVY = '"Avenir LT Std 85 Heavy", "AvenirLTPro-Heavy", "Avenir Heavy", "Avenir Next Heavy", "Avenir", "Montserrat", sans-serif';
+  const FONT_BOOK = '"Avenir LT Std 45 Book", "Avenir Next", "Avenir", "Montserrat", sans-serif';
+
+  const mapContainer = document.querySelector('.map-container');
+  const sidebar = document.querySelector('.sidebar');
+  const appBody = document.querySelector('.app-body');
+
+  // Canvas dimensions: US Letter landscape 300 DPI
+  const TW = 3300, TH = 2550;
+  const HEADER_H = Math.round(TH * 0.08);  // ~204px header
+  const FOOTER_H = Math.round(TH * 0.16);  // ~408px footer
+  const MAP_H = TH - HEADER_H - FOOTER_H;  // ~1938px map area
+  const targetAspect = TW / MAP_H;
+
+  // Save state
+  const origSidebarDisplay = sidebar ? sidebar.style.display : '';
+  const savedCenter = map.getCenter();
+
+  // Reshape map to landscape aspect
+  if (sidebar) sidebar.style.display = 'none';
+  const vpW = window.innerWidth;
+  const vpH = window.innerHeight - (document.querySelector('header')?.offsetHeight || 0);
+  let layoutW = vpW;
+  let layoutH = Math.round(vpW / targetAspect);
+  if (layoutH > vpH) { layoutH = vpH; layoutW = Math.round(vpH * targetAspect); }
+  if (appBody) appBody.setAttribute('style', `width:${layoutW}px;height:${layoutH}px;position:relative;overflow:hidden;`);
+  mapContainer.setAttribute('style', `width:${layoutW}px;height:${layoutH}px;position:absolute;top:0;left:0;`);
+
+  google.maps.event.trigger(map, 'resize');
+  map.setCenter(savedCenter);
+  await new Promise(r => setTimeout(r, 2000));
+
+  // Collapse groups
+  logoGroups.forEach(g => { if (g._expanded) g.collapse(); });
+
+  // Hide UI controls
+  const hideEls = mapContainer.querySelectorAll('.map-controls, .draw-indicator, .place-indicator, .select-indicator, .select-rect');
+  hideEls.forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.lo-pin-x, .lo-pin-upload, .lo-pin-tooltip, .lo-pin-nobg, .lo-pin-resize, .logo-group-collapse, .logo-group-resize, .logo-group-controls').forEach(el => el.style.setProperty('display','none','important'));
+
+  // Collect logo positions before hiding
+  const containerRect = mapContainer.getBoundingClientRect();
+  const logoPins = [];
+  mapContainer.querySelectorAll('.lo-pin').forEach(pin => {
+    const rect = pin.getBoundingClientRect();
+    const visible = rect.right > containerRect.left && rect.left < containerRect.right &&
+                    rect.bottom > containerRect.top && rect.top < containerRect.bottom;
+    if (!visible) { pin.style.setProperty('display','none','important'); pin._wasOffscreen = true; return; }
+    const img = pin.querySelector('.lo-pin-img');
+    const tooltip = pin.querySelector('.lo-pin-tooltip');
+    const name = tooltip?.textContent || '?';
+    const hue = Math.abs(name.split('').reduce((h,c)=>h+c.charCodeAt(0),0)) % 360;
+    let imgSrc = null, logoDomain = null;
+    const overlay = placedMarkers.find(m => m._el && m._el.contains(pin));
+    if (overlay) { logoDomain = overlay._domain || null; const uploaded = getUploadedLogo(overlay._logoKey); if (uploaded) imgSrc = uploaded; }
+    if (!imgSrc && img) imgSrc = img.src || null;
+    logoPins.push({ pin, rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height }, imgSrc, logoDomain, noBg: pin.classList.contains('no-bg'), name, hue });
+  });
+
+  // Hide logos for html2canvas
+  mapContainer.querySelectorAll('.lo-pin').forEach(pin => { if (!pin._wasOffscreen) { pin.style.setProperty('visibility', 'hidden', 'important'); pin._wasExportHidden = true; } });
+  mapContainer.querySelectorAll('.logo-group-wrap').forEach(el => { el.style.setProperty('visibility', 'hidden', 'important'); el._wasExportHidden = true; });
+
+  setStatus('Capturing map for flyer…');
+  const scaleFactor = Math.min(3, TW / layoutW);
+
+  try {
+    const canvas = await html2canvas(mapContainer, {
+      useCORS: true, allowTaint: true,
+      width: layoutW, height: layoutH, scale: scaleFactor,
+      logging: false, backgroundColor: '#1a2e1a', imageTimeout: 5000,
+    });
+
+    // Restore layout
+    mapContainer.removeAttribute('style');
+    if (appBody) appBody.removeAttribute('style');
+    if (sidebar) sidebar.style.display = origSidebarDisplay;
+    google.maps.event.trigger(map, 'resize');
+    map.setCenter(savedCenter);
+    _restoreExportUI(hideEls, [], mapContainer);
+
+    // Build final flyer canvas
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = TW; finalCanvas.height = TH;
+    const ctx = finalCanvas.getContext('2d');
+
+    // ── HEADER BAR ──
+    ctx.fillStyle = DARK_GREEN;
+    ctx.fillRect(0, 0, TW, HEADER_H);
+
+    const hPad = Math.round(TW * 0.02);
+    // "AVAILABLE FOR SALE | LEASE"
+    const tagSize = Math.round(HEADER_H * 0.22);
+    ctx.font = `900 ${tagSize}px ${FONT_HEAVY}`;
+    ctx.fillStyle = GOLD;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('AVAILABLE FOR SALE | LEASE', hPad, Math.round(HEADER_H * 0.15));
+
+    // Property address (2 lines)
+    const addr = document.getElementById('propertyBadge').textContent;
+    const addrParts = addr.split(',').map(s => s.trim());
+    const addrLine1 = addrParts[0] + (addrParts.length > 1 ? ',' : '');
+    const addrLine2 = addrParts.slice(1).join(', ');
+    const addrSize = Math.round(HEADER_H * 0.2);
+    ctx.font = `900 ${addrSize}px ${FONT_HEAVY}`;
+    ctx.fillStyle = WHITE;
+    ctx.fillText(addrLine1, hPad, Math.round(HEADER_H * 0.45));
+    if (addrLine2) ctx.fillText(addrLine2, hPad, Math.round(HEADER_H * 0.7));
+
+    // ── MAP AREA ──
+    ctx.drawImage(canvas, 0, HEADER_H, TW, MAP_H);
+
+    // Draw logos onto map area
+    setStatus(`Drawing ${logoPins.length} logos onto flyer…`);
+    // Adjust containerRect for the header offset
+    const flyerContainerRect = {
+      left: containerRect.left,
+      top: containerRect.top,
+      width: containerRect.width,
+      height: containerRect.height
+    };
+    // We need to offset the drawing by HEADER_H
+    const mapScaleX = TW / layoutW;
+    const mapScaleY = MAP_H / layoutH;
+
+    // Pre-load all logos in parallel
+    const loadPromises = logoPins.map(entry =>
+      _loadExportImage(entry.imgSrc, entry.logoDomain).catch(() => null)
+    );
+    const loadedImages = await Promise.allSettled(loadPromises);
+
+    for (let i = 0; i < logoPins.length; i++) {
+      const entry = logoPins[i];
+      const { rect, noBg, name, hue } = entry;
+      const cx = (rect.left + rect.width / 2 - flyerContainerRect.left) * mapScaleX;
+      const cy = (rect.top + rect.height / 2 - flyerContainerRect.top) * mapScaleY + HEADER_H;
+      const pinR = (rect.width / 2) * mapScaleX;
+      const imgR = pinR * 0.8;
+      const result = loadedImages[i];
+      const loadedImg = (result.status === 'fulfilled') ? result.value : null;
+
+      if (loadedImg) {
+        if (noBg) {
+          ctx.drawImage(loadedImg, cx - imgR, cy - imgR, imgR * 2, imgR * 2);
+        } else {
+          ctx.save();
+          ctx.beginPath(); ctx.arc(cx, cy, pinR, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10 * mapScaleX; ctx.shadowOffsetY = 2 * mapScaleX;
+          ctx.fill(); ctx.shadowColor = 'transparent';
+          ctx.beginPath(); ctx.arc(cx, cy, imgR, 0, Math.PI * 2); ctx.clip();
+          ctx.drawImage(loadedImg, cx - imgR, cy - imgR, imgR * 2, imgR * 2);
+          ctx.restore();
+        }
+      } else {
+        const letter = (name || '?').charAt(0).toUpperCase();
+        ctx.save();
+        ctx.beginPath(); ctx.arc(cx, cy, pinR, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10 * mapScaleX; ctx.shadowOffsetY = 2 * mapScaleX;
+        ctx.fill(); ctx.shadowColor = 'transparent';
+        ctx.beginPath(); ctx.arc(cx, cy, imgR, 0, Math.PI * 2);
+        ctx.fillStyle = `hsl(${hue},55%,45%)`; ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${Math.round(imgR * 1.2)}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(letter, cx, cy + 1);
+        ctx.restore();
+      }
+    }
+
+    // ── FOOTER BAR ──
+    // Gold line at top of footer
+    const goldLineH = Math.round(TH * 0.004);
+    ctx.fillStyle = GOLD;
+    ctx.fillRect(0, TH - FOOTER_H, TW, goldLineH);
+
+    // Dark green background
+    ctx.fillStyle = DARK_GREEN;
+    ctx.fillRect(0, TH - FOOTER_H + goldLineH, TW, FOOTER_H - goldLineH);
+
+    const fPad = Math.round(TW * 0.03);
+    const footerTop = TH - FOOTER_H + goldLineH;
+
+    // Left side: Property address (large)
+    const fAddrSize = Math.round(FOOTER_H * 0.2);
+    ctx.font = `900 ${fAddrSize}px ${FONT_HEAVY}`;
+    ctx.fillStyle = WHITE;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const fAddrY = footerTop + Math.round(FOOTER_H * 0.12);
+    ctx.fillText(addrLine1, fPad, fAddrY);
+    if (addrLine2) ctx.fillText(addrLine2, fPad, fAddrY + fAddrSize * 1.25);
+
+    // "AVAILABLE FOR SALE | LEASE" in gold below address
+    const fTagSize = Math.round(FOOTER_H * 0.13);
+    ctx.font = `900 ${fTagSize}px ${FONT_HEAVY}`;
+    ctx.fillStyle = GOLD;
+    const fTagY = fAddrY + fAddrSize * (addrLine2 ? 2.7 : 1.5);
+    ctx.fillText('AVAILABLE FOR SALE | LEASE', fPad, fTagY);
+
+    // Right side: REAT logo badge
+    const badgeH = Math.round(FOOTER_H * 0.6);
+    const badgeW = badgeH; // square
+    const badgeX = TW - fPad - badgeW;
+    const badgeY = footerTop + Math.round((FOOTER_H - goldLineH - badgeH) / 2);
+
+    // Gold square
+    ctx.fillStyle = GOLD;
+    ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
+
+    // "REAT" text inside badge
+    const reatSize = Math.round(badgeH * 0.3);
+    ctx.font = `900 ${reatSize}px serif`;
+    ctx.fillStyle = DARK_GREEN;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('REAT', badgeX + badgeW / 2, badgeY + badgeH * 0.3);
+
+    // "COMMERCIAL" smaller text
+    const comSize = Math.round(badgeH * 0.1);
+    ctx.font = `700 ${comSize}px ${FONT_HEAVY}`;
+    ctx.fillText('COMMERCIAL', badgeX + badgeW / 2, badgeY + badgeH * 0.52);
+
+    // Divider line inside badge
+    const divW = badgeW * 0.6;
+    ctx.fillStyle = DARK_GREEN;
+    ctx.fillRect(badgeX + (badgeW - divW) / 2, badgeY + badgeH * 0.6, divW, 2);
+
+    // "REAL ESTATE" / "ADVISORY" / "TEAM"
+    const subSize = Math.round(badgeH * 0.08);
+    ctx.font = `600 ${subSize}px ${FONT_HEAVY}`;
+    ctx.fillStyle = DARK_GREEN;
+    ctx.fillText('REAL ESTATE', badgeX + badgeW / 2, badgeY + badgeH * 0.7);
+    ctx.fillText('ADVISORY', badgeX + badgeW / 2, badgeY + badgeH * 0.8);
+    ctx.fillText('TEAM', badgeX + badgeW / 2, badgeY + badgeH * 0.9);
+
+    // ── OUTPUT ──
+    const slug = addr.replace(/[^a-z0-9]/gi, '-').substring(0, 40) || 'export';
+
+    if (format === 'pdf' && window.jspdf) {
+      // Generate PDF using jsPDF — Letter landscape
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: 'letter' });
+      const imgData = finalCanvas.toDataURL('image/jpeg', 0.95);
+      pdf.addImage(imgData, 'JPEG', 0, 0, 11, 8.5);
+      pdf.save(`REAT-Flyer-${slug}.pdf`);
+      setStatus('REAT Flyer PDF downloaded — 300 DPI');
+    } else {
+      // PNG fallback
+      finalCanvas.toBlob(blob => {
+        if (!blob) { setStatus('Export failed'); return; }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `REAT-Flyer-${slug}.png`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setStatus(`REAT Flyer PNG downloaded — ${TW}×${TH}px 300 DPI`);
+      }, 'image/png');
+    }
+
+  } catch (err) {
+    mapContainer.removeAttribute('style');
+    if (appBody) appBody.removeAttribute('style');
+    if (sidebar) sidebar.style.display = origSidebarDisplay;
+    google.maps.event.trigger(map, 'resize');
+    map.setCenter(savedCenter);
+    _restoreExportUI(hideEls, [], mapContainer);
+    console.error('Flyer export error:', err);
+    setStatus('Flyer export failed — ' + err.message);
+  }
+}
+
 // ─── SCREEN CAPTURE EXPORT ──────────────────────────────────────────────────
 // Captures EXACTLY what's on screen — map, logos, highlights, radii — landscape
 
@@ -4722,10 +5011,11 @@ async function _drawGroupsOnCanvas(ctx, mapContainer, containerRect, layoutW, la
 
 // A3 landscape 200dpi = 3307×2339, A4 landscape 200dpi = 2339×1654
 const EXPORT_SIZES = {
-  A3:       { w: 3307, h: 2339 },
-  A4:       { w: 2339, h: 1654 },
-  WIDE:     { w: 3840, h: 2220 },   // 4K widescreen (~16:9 + branding)
-  'WIDE-5K':{ w: 5120, h: 2960 },   // 5K ultra-high-res for print/retina
+  A3:       { w: 4961, h: 3508 },   // A3 landscape 300 DPI
+  A4:       { w: 3508, h: 2480 },   // A4 landscape 300 DPI
+  WIDE:     { w: 3840, h: 2220 },   // 4K widescreen
+  'WIDE-5K':{ w: 5120, h: 2960 },   // 5K ultra-high-res
+  FLYER:    { w: 3300, h: 2550 },   // US Letter landscape 300 DPI
 };
 
 async function exportImage(format, size) {
