@@ -4593,7 +4593,7 @@ async function exportFlyer(format) {
 
   try {
     const canvas = await html2canvas(mapContainer, {
-      useCORS: true, allowTaint: true,
+      useCORS: true, allowTaint: false,
       width: layoutW, height: layoutH, scale: scaleFactor,
       logging: false, backgroundColor: '#1a2e1a', imageTimeout: 5000,
     });
@@ -5155,7 +5155,7 @@ async function exportImage(format, size) {
   try {
     const canvas = await html2canvas(mapContainer, {
       useCORS: true,
-      allowTaint: true,
+      allowTaint: false,
       width: layoutW,
       height: layoutH,
       scale: scaleFactor,
