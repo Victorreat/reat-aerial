@@ -2319,7 +2319,7 @@ function initWithKey() {
 
 function loadGoogleMaps(key) {
   const script = document.createElement('script');
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geometry&loading=async&callback=initMap`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geometry&v=weekly&loading=async&callback=initMap`;
   script.async = true;
   script.onerror = () => {
     alert('Failed to load Google Maps. Check your API key and enabled APIs.');
@@ -2418,7 +2418,7 @@ window.addEventListener('DOMContentLoaded', () => {
 function initMap() {
   document.getElementById('keyScreen').style.display = 'none';
 
-  map = new google.maps.Map(document.getElementById('map'), {
+  const mapOpts = {
     center: { lat: 41.455, lng: -81.917 }, // Westlake, OH
     zoom: 17,
     mapTypeId: 'hybrid',
@@ -2426,7 +2426,10 @@ function initMap() {
     disableDefaultUI: true,
     gestureHandling: 'greedy',
     clickableIcons: false
-  });
+  };
+  const savedMapId = localStorage.getItem('reat_map_id');
+  if (savedMapId) mapOpts.mapId = savedMapId;
+  map = new google.maps.Map(document.getElementById('map'), mapOpts);
 
   // ─── Circular Logo Pin Overlay ──────────────────────────────────────────────
   _LogoOverlay = class extends google.maps.OverlayView {
