@@ -4584,6 +4584,9 @@ async function exportFlyer(format) {
     logoPins.push({ pin, rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height }, imgSrc, logoDomain, noBg: pin.classList.contains('no-bg'), name, hue });
   });
 
+  // Capture group data BEFORE hiding — positions are correct in export layout
+  const capturedGroups = _captureGroupsForExport(mapContainer, containerRect);
+
   // Hide logos for html2canvas
   mapContainer.querySelectorAll('.lo-pin').forEach(pin => { if (!pin._wasOffscreen) { pin.style.setProperty('visibility', 'hidden', 'important'); pin._wasExportHidden = true; } });
   mapContainer.querySelectorAll('.logo-group-wrap').forEach(el => { el.style.setProperty('visibility', 'hidden', 'important'); el._wasExportHidden = true; });
@@ -4675,6 +4678,9 @@ async function exportFlyer(format) {
         ctx.restore();
       }
     }
+
+    // Draw logo groups onto map area
+    await _drawGroupsOnCanvas(ctx, capturedGroups, flyerContainerRect, layoutW, layoutH, TW, MAP_H);
 
     // ── FOOTER BAR (matching REAT flyer template) ──
     // Gold stripe at top of footer
@@ -4953,11 +4959,9 @@ async function _drawLogosOnCanvas(ctx, logoPins, containerRect, layoutW, layoutH
   }
 }
 
-// Draw logo group boxes directly onto the canvas
-async function _drawGroupsOnCanvas(ctx, mapContainer, containerRect, layoutW, layoutH, TW, mapH) {
-  const scaleX = TW / layoutW;
-  const scaleY = mapH / layoutH;
-
+// Capture group data BEFORE layout restore — call while map is still in export layout
+function _captureGroupsForExport(mapContainer, containerRect) {
+  const captured = [];
   for (const group of logoGroups) {
     if (!group._el || group._expanded) continue;
     const box = group._el.querySelector('.logo-group-box');
@@ -4965,11 +4969,105 @@ async function _drawGroupsOnCanvas(ctx, mapContainer, containerRect, layoutW, la
     const boxRect = box.getBoundingClientRect();
     if (boxRect.width === 0 || boxRect.height === 0) continue;
 
+    // Capture header label
+    const header = group._header || '';
+
+    // Capture leader line anchor + box center for drawing line
+    let anchorPx = null, boxCenterPx = null;
+    const proj = group.getProjection();
+    if (proj && group._anchorPos && group._pos) {
+      anchorPx = proj.fromLatLngToDivPixel(group._anchorPos);
+      const posPx = proj.fromLatLngToDivPixel(group._pos);
+      if (anchorPx && posPx) {
+        // Convert to containerRect-relative
+        const panes = group.getPanes();
+        const paneEl = panes?.overlayMouseTarget;
+        if (paneEl) {
+          const paneRect = paneEl.getBoundingClientRect();
+          anchorPx = { x: anchorPx.x + paneRect.left - containerRect.left,
+                       y: anchorPx.y + paneRect.top - containerRect.top };
+          boxCenterPx = { x: boxRect.left + boxRect.width / 2 - containerRect.left,
+                          y: boxRect.top + boxRect.height / 2 - containerRect.top };
+        }
+      }
+    }
+
+    // Capture each logo element's position and data
+    const logos = [];
+    const logoEls = box.querySelectorAll('.group-logo, .group-initial');
+    for (const el of logoEls) {
+      const elRect = el.getBoundingClientRect();
+      const entry = {
+        rect: { left: elRect.left, top: elRect.top, width: elRect.width, height: elRect.height },
+        isImg: el.classList.contains('group-logo') && !!el.src,
+        src: el.src || null,
+        domain: null,
+        letter: (el.textContent || '?').trim().charAt(0).toUpperCase(),
+        bg: el.style.background || '#6a8a5a',
+      };
+      if (entry.isImg) {
+        const dm = el.src.match(/logo\.dev\/([^?/]+)/);
+        if (dm) entry.domain = dm[1];
+      }
+      logos.push(entry);
+    }
+
+    captured.push({
+      boxRect: { left: boxRect.left, top: boxRect.top, width: boxRect.width, height: boxRect.height },
+      header,
+      logos,
+      anchorPx,
+      boxCenterPx,
+    });
+  }
+  return captured;
+}
+
+// Draw logo group boxes directly onto the canvas using pre-captured data
+async function _drawGroupsOnCanvas(ctx, capturedGroups, containerRect, layoutW, layoutH, TW, mapH) {
+  const scaleX = TW / layoutW;
+  const scaleY = mapH / layoutH;
+
+  for (const gData of capturedGroups) {
+    const { boxRect, header, logos, anchorPx, boxCenterPx } = gData;
+
     // Box position on final canvas
     const bx = (boxRect.left - containerRect.left) * scaleX;
     const by = (boxRect.top - containerRect.top) * scaleY;
     const bw = boxRect.width * scaleX;
     const bh = boxRect.height * scaleY;
+
+    // Draw leader line from anchor to box edge
+    if (anchorPx && boxCenterPx) {
+      const ax = anchorPx.x * scaleX;
+      const ay = anchorPx.y * scaleY;
+      // Find nearest point on box edge from anchor
+      const clampX = Math.max(bx, Math.min(bx + bw, ax));
+      const clampY = Math.max(by, Math.min(by + bh, ay));
+      const insideBox = ax >= bx && ax <= bx + bw && ay >= by && ay <= by + bh;
+      const edgeX = insideBox ? bx + bw / 2 : clampX;
+      const edgeY = insideBox ? by + bh : clampY;
+      const dx = edgeX - ax, dy = edgeY - ay;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 10 * scaleX) {
+        // Shadow line
+        ctx.save();
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(edgeX, edgeY);
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 4 * scaleX; ctx.stroke();
+        ctx.restore();
+        // Gold line
+        ctx.save();
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(edgeX, edgeY);
+        ctx.strokeStyle = '#cba040'; ctx.lineWidth = 2 * scaleX; ctx.stroke();
+        ctx.restore();
+        // Anchor dot
+        ctx.save();
+        ctx.beginPath(); ctx.arc(ax, ay, 4 * scaleX, 0, Math.PI * 2);
+        ctx.fillStyle = '#cba040'; ctx.fill();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5 * scaleX; ctx.stroke();
+        ctx.restore();
+      }
+    }
 
     // Draw box background
     ctx.save();
@@ -4978,26 +5076,34 @@ async function _drawGroupsOnCanvas(ctx, mapContainer, containerRect, layoutW, la
     if (ctx.roundRect) { ctx.roundRect(bx, by, bw, bh, br); }
     else { ctx.moveTo(bx+br,by); ctx.lineTo(bx+bw-br,by); ctx.quadraticCurveTo(bx+bw,by,bx+bw,by+br); ctx.lineTo(bx+bw,by+bh-br); ctx.quadraticCurveTo(bx+bw,by+bh,bx+bw-br,by+bh); ctx.lineTo(bx+br,by+bh); ctx.quadraticCurveTo(bx,by+bh,bx,by+bh-br); ctx.lineTo(bx,by+br); ctx.quadraticCurveTo(bx,by,bx+br,by); ctx.closePath(); }
     ctx.fillStyle = 'rgba(240,240,240,0.75)';
+    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+    ctx.shadowBlur = 6 * scaleX;
+    ctx.shadowOffsetY = 2 * scaleX;
     ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Draw header label if present
+    if (header) {
+      const headerFontSize = Math.max(10, Math.round(bh * 0.12));
+      ctx.fillStyle = 'rgba(0,0,0,0.8)';
+      ctx.font = `bold ${headerFontSize}px 'DM Sans', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(header, bx + bw / 2, by + 5 * scaleY);
+    }
 
     // Draw each logo in the group
-    const logos = box.querySelectorAll('.group-logo, .group-initial');
-    for (const el of logos) {
-      const elRect = el.getBoundingClientRect();
-      const ex = (elRect.left - containerRect.left) * scaleX;
-      const ey = (elRect.top - containerRect.top) * scaleY;
-      const ew = elRect.width * scaleX;
-      const eh = elRect.height * scaleY;
+    for (const logo of logos) {
+      const ex = (logo.rect.left - containerRect.left) * scaleX;
+      const ey = (logo.rect.top - containerRect.top) * scaleY;
+      const ew = logo.rect.width * scaleX;
+      const eh = logo.rect.height * scaleY;
       const ecx = ex + ew / 2;
       const ecy = ey + eh / 2;
       const er = Math.min(ew, eh) / 2;
 
-      if (el.classList.contains('group-logo') && el.src) {
-        // Extract domain from logo.dev URL if possible
-        let elDomain = null;
-        const dm = el.src.match(/logo\.dev\/([^?/]+)/);
-        if (dm) elDomain = dm[1];
-        const loadedImg = await _loadExportImage(el.src, elDomain);
+      if (logo.isImg && logo.src) {
+        const loadedImg = await _loadExportImage(logo.src, logo.domain);
         if (loadedImg) {
           ctx.save();
           ctx.beginPath();
@@ -5009,17 +5115,16 @@ async function _drawGroupsOnCanvas(ctx, mapContainer, containerRect, layoutW, la
         }
       }
       // Fallback: draw initial circle
-      const letter = (el.textContent || '?').trim().charAt(0).toUpperCase();
       ctx.save();
       ctx.beginPath();
       ctx.arc(ecx, ecy, er, 0, Math.PI * 2);
-      ctx.fillStyle = el.style.background || '#6a8a5a';
+      ctx.fillStyle = logo.bg;
       ctx.fill();
       ctx.fillStyle = '#fff';
       ctx.font = `bold ${Math.round(er)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(letter, ecx, ecy);
+      ctx.fillText(logo.letter, ecx, ecy);
       ctx.restore();
     }
     ctx.restore();
@@ -5138,13 +5243,16 @@ async function exportImage(format, size) {
       pin._wasExportHidden = true;
     }
   });
-  // Also hide group boxes — we'll draw those too
+  // Capture group data BEFORE hiding — positions are still correct in export layout
+  const capturedGroups = _captureGroupsForExport(mapContainer, containerRect);
+
+  // Now hide group boxes — we'll draw those manually
   mapContainer.querySelectorAll('.logo-group-wrap').forEach(el => {
     el.style.setProperty('visibility', 'hidden', 'important');
     el._wasExportHidden = true;
   });
 
-  setStatus(`Capturing map — ${logoPins.length} logos will be drawn…`);
+  setStatus(`Capturing map — ${logoPins.length} logos, ${capturedGroups.length} groups will be drawn…`);
 
   // Scale factor capped at 2x — higher values cause html2canvas to re-fetch
   // map tiles which fail CORS. Logos are drawn separately at full resolution.
@@ -5184,7 +5292,7 @@ async function exportImage(format, size) {
     // Now draw ACTUAL logos directly onto the canvas — bypasses html2canvas entirely
     setStatus(`Drawing ${logoPins.length} logos onto export…`);
     await _drawLogosOnCanvas(ctx, logoPins, containerRect, layoutW, layoutH, TW, mapH);
-    await _drawGroupsOnCanvas(ctx, mapContainer, containerRect, layoutW, layoutH, TW, mapH);
+    await _drawGroupsOnCanvas(ctx, capturedGroups, containerRect, layoutW, layoutH, TW, mapH);
 
     // Branding strip at bottom
     ctx.fillStyle = 'rgba(26,46,26,0.95)';
