@@ -5082,14 +5082,27 @@ async function _drawGroupsOnCanvas(ctx, capturedGroups, containerRect, layoutW, 
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    // Draw header label if present
+    // Draw header label if present — fit text within box width
     if (header) {
-      const headerFontSize = Math.max(10, Math.round(bh * 0.12));
-      ctx.fillStyle = 'rgba(0,0,0,0.8)';
+      const pad = 6 * scaleX;
+      const maxW = bw - pad * 2;
+      let headerFontSize = Math.max(8, Math.round(bh * 0.12));
       ctx.font = `bold ${headerFontSize}px 'DM Sans', sans-serif`;
+      // Shrink font until text fits within box width
+      while (headerFontSize > 8 && ctx.measureText(header).width > maxW) {
+        headerFontSize--;
+        ctx.font = `bold ${headerFontSize}px 'DM Sans', sans-serif`;
+      }
+      ctx.save();
+      // Clip to box so text never bleeds outside
+      ctx.beginPath();
+      ctx.rect(bx, by, bw, bh);
+      ctx.clip();
+      ctx.fillStyle = 'rgba(0,0,0,0.8)';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillText(header, bx + bw / 2, by + 5 * scaleY);
+      ctx.fillText(header, bx + bw / 2, by + 4 * scaleY);
+      ctx.restore();
     }
 
     // Draw each logo in the group
