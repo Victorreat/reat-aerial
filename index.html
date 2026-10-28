@@ -2832,6 +2832,12 @@ function initMap() {
 
     _buildGroupBox() {
       if (!this._el) return;
+      // Remove stale document-level resize listeners before adding new ones
+      if (this._groupResizeListeners) {
+        document.removeEventListener('mousemove', this._groupResizeListeners.onResizeMove);
+        document.removeEventListener('mouseup', this._groupResizeListeners.onResizeUp);
+        this._groupResizeListeners = null;
+      }
       // Remove old elements
       const old = this._el.querySelector('.logo-group-box');
       if (old) old.remove();
@@ -2916,6 +2922,7 @@ function initMap() {
       };
       document.addEventListener('mousemove', onResizeMove);
       document.addEventListener('mouseup', onResizeUp);
+      this._groupResizeListeners = { onResizeMove, onResizeUp };
       box.appendChild(resizeHandle);
 
       this._el.appendChild(box);
@@ -3128,6 +3135,11 @@ function initMap() {
       if (this._mapClickListener) {
         google.maps.event.removeListener(this._mapClickListener);
         this._mapClickListener = null;
+      }
+      if (this._groupResizeListeners) {
+        document.removeEventListener('mousemove', this._groupResizeListeners.onResizeMove);
+        document.removeEventListener('mouseup', this._groupResizeListeners.onResizeUp);
+        this._groupResizeListeners = null;
       }
       if (this._lineShadow) { this._lineShadow.setMap(null); this._lineShadow = null; }
       if (this._line) { this._line.setMap(null); this._line = null; }
