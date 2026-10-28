@@ -1168,6 +1168,7 @@
     <button class="btn btn-outline" onclick="clearMarkers()">Clear Logos</button>
     <button class="btn btn-outline" onclick="clearHighlights()">Clear Highlights</button>
     <button class="btn btn-outline" onclick="clearAll()" style="border-color:rgba(200,80,80,0.5);color:#e88;">Clear All</button>
+    <button class="btn btn-outline" onclick="showBatchModal()" style="border-color:rgba(186,140,54,0.6);">Batch ⚡</button>
     <button class="btn btn-gold" onclick="showExport()">Export ↓</button>
   </div>
 </header>
@@ -1430,6 +1431,19 @@
   <div class="status-item">Logos placed: <span id="logoCount" style="color:var(--gold)">0</span></div>
   <div class="status-item">Lat/Lng: <span id="coordDisplay" style="color:var(--gold); font-size:9px;">—</span></div>
   <div class="status-item" style="margin-left:auto;">REAT Commercial · Aerial Map Tool v1.0</div>
+</div>
+
+<!-- BATCH MODAL -->
+<div class="overlay-backdrop" id="batchBackdrop" onclick="hideBatchModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;"></div>
+<div id="batchModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2001;background:var(--panel-bg);border:1px solid var(--border);border-radius:6px;padding:24px;width:520px;max-width:95vw;max-height:80vh;overflow-y:auto;">
+  <h3 style="color:var(--gold);font-family:'DM Mono',monospace;font-size:13px;letter-spacing:0.1em;margin:0 0 14px;">⚡ BATCH AERIAL GENERATOR</h3>
+  <p style="font-size:11px;color:var(--text-muted);margin:0 0 10px;">One address per line. Generates Low + High aerial and saves both to your map list.</p>
+  <textarea id="batchAddresses" style="width:100%;height:140px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-light);padding:10px;font-family:'DM Mono',monospace;font-size:11px;border-radius:3px;resize:vertical;outline:none;" placeholder="9000 Mentor Ave, Mentor, OH&#10;28600 Chagrin Blvd, Woodmere, OH&#10;16100 Lorain Ave, Cleveland, OH 44111"></textarea>
+  <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+    <button class="btn btn-gold" onclick="startBatchGenerate()" id="batchRunBtn">Run Batch</button>
+    <button class="btn btn-outline" onclick="hideBatchModal()">Cancel</button>
+  </div>
+  <div id="batchLog" style="margin-top:14px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;max-height:260px;overflow-y:auto;"></div>
 </div>
 
 <!-- EXPORT PANEL -->
@@ -5842,6 +5856,200 @@ async function deleteMap(id, name) {
   }
   setStatus(`"${name}" deleted`);
   loadSavedMapsList();
+}
+
+// ─── BATCH AERIAL GENERATOR ──────────────────────────────────────────────────
+function showBatchModal() {
+  document.getElementById('batchBackdrop').style.display = '';
+  document.getElementById('batchModal').style.display = '';
+}
+function hideBatchModal() {
+  document.getElementById('batchBackdrop').style.display = 'none';
+  document.getElementById('batchModal').style.display = 'none';
+}
+
+function _batchLog(msg, color='#c8d8b8') {
+  const el = document.getElementById('batchLog');
+  el.innerHTML += `<div style="color:${color}">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function _batchGeocodeAddress(address) {
+  return new Promise((resolve, reject) => {
+    const gc = new google.maps.Geocoder();
+    gc.geocode({ address }, (results, status) => {
+      if (status === 'OK' && results[0]) resolve(results[0].geometry.location);
+      else reject(new Error(`Geocode failed: ${status}`));
+    });
+  });
+}
+
+function _batchRunQuery(query, center, radiusMeters) {
+  return new Promise(resolve => {
+    const results = [];
+    const timeout = setTimeout(() => resolve(results), 10000);
+    function handlePage(pageResults, status, pagination) {
+      if (status === google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
+        setTimeout(() => {
+          const svc = new google.maps.places.PlacesService(map);
+          svc.textSearch({ query, location: center, radius: radiusMeters }, handlePage);
+        }, 2500);
+        return;
+      }
+      if (status === google.maps.places.PlacesServiceStatus.OK && pageResults) {
+        results.push(...pageResults);
+      }
+      if (pagination && pagination.hasNextPage) {
+        setTimeout(() => pagination.nextPage(), 700);
+      } else {
+        clearTimeout(timeout);
+        resolve(results);
+      }
+    }
+    const svc = new google.maps.places.PlacesService(map);
+    svc.textSearch({ query, location: center, radius: radiusMeters }, handlePage);
+  });
+}
+
+async function _batchGenerateLogos(center, radiusMeters) {
+  const seenPlaceIds = new Set();
+  const seenDomainLocs = new Map();
+  const logos = [];
+
+  function withinRadius(loc) {
+    return google.maps.geometry.spherical.computeDistanceBetween(center, loc) <= radiusMeters;
+  }
+  function isDupDomain(domain, loc) {
+    if (!domain) return false;
+    const locs = seenDomainLocs.get(domain);
+    if (!locs) return false;
+    return locs.some(l => google.maps.geometry.spherical.computeDistanceBetween(l, loc) < 200);
+  }
+  function trackDomain(domain, loc) {
+    if (!domain) return;
+    if (!seenDomainLocs.has(domain)) seenDomainLocs.set(domain, []);
+    seenDomainLocs.get(domain).push(loc);
+  }
+
+  const catIds = Object.keys(SECTOR_SEARCH);
+  const isLandmark = id => id === 'Hospital' || id === 'Schools';
+
+  for (let i = 0; i < catIds.length; i++) {
+    const catId = catIds[i];
+    const queries = SECTOR_SEARCH[catId];
+    if (!queries) continue;
+
+    const el = document.getElementById('batchLog');
+    const lastLine = el.lastElementChild;
+    if (lastLine) lastLine.textContent = `  [${i+1}/${catIds.length}] ${catId}… (${logos.length} found)`;
+
+    // Run queries in groups of 5 to avoid overwhelming the API
+    const QBATCH = 5;
+    const allResults = [];
+    for (let qi = 0; qi < queries.length; qi += QBATCH) {
+      const slice = queries.slice(qi, qi + QBATCH);
+      const res = await Promise.all(slice.map(q => _batchRunQuery(q, center, radiusMeters)));
+      allResults.push(...res);
+      if (qi + QBATCH < queries.length) await new Promise(r => setTimeout(r, 350));
+    }
+
+    for (let qi = 0; qi < queries.length; qi++) {
+      const q = queries[qi];
+      for (const r of (allResults[qi] || [])) {
+        if (!r.geometry || !r.place_id) continue;
+        if (seenPlaceIds.has(r.place_id)) continue;
+        if (!withinRadius(r.geometry.location)) continue;
+        const matched = lookupBrand(r.name);
+        let domain;
+        if (matched) {
+          domain = matched.domain;
+        } else if (isLandmark(catId)) {
+          domain = '';
+        } else if (!_GENERIC_QUERIES.has(q)) {
+          const normQ = _normBrand(q), normN = _normBrand(r.name);
+          if (!normN.includes(normQ)) continue;
+          domain = _deriveDomain(q);
+        } else {
+          continue;
+        }
+        if (isDupDomain(domain, r.geometry.location)) continue;
+        seenPlaceIds.add(r.place_id);
+        trackDomain(domain, r.geometry.location);
+        const lat = _rd(r.geometry.location.lat()), lng = _rd(r.geometry.location.lng());
+        logos.push({ anchor:{lat,lng}, pos:{lat,lng}, name: r.name, domain });
+      }
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return logos;
+}
+
+async function _batchSaveMap(name, center, zoom, logos) {
+  const state = {
+    center: { lat: _rd(center.lat()), lng: _rd(center.lng()) },
+    zoom, heading: 0, tilt: 0, mapType: 'hybrid',
+    address: name.replace(/ — (Low|High) Aerial$/, ''),
+    subjectLocation: { lat: _rd(center.lat()), lng: _rd(center.lng()) },
+    logos, highlights: [], groups: [], radii: [],
+    activeCategories: [],
+    layers: { roads: true, businesses: true, traffic: true, siteMarker: true },
+  };
+  const userId = _getUserId();
+  const { data, error } = await _supa.from('saved_maps').insert({
+    user_id: userId, name, map_state: state,
+  }).select('id').single();
+  if (error) throw new Error(error.message);
+  return data.id;
+}
+
+async function startBatchGenerate() {
+  const textarea = document.getElementById('batchAddresses');
+  const addresses = textarea.value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (!addresses.length) { alert('Enter at least one address.'); return; }
+
+  const btn = document.getElementById('batchRunBtn');
+  btn.disabled = true;
+  btn.textContent = 'Running…';
+  document.getElementById('batchLog').innerHTML = '';
+
+  const LOW_R  = 0.75 * 1609.34;
+  const HIGH_R = 1.0  * 1609.34;
+  let saved = 0;
+
+  for (const address of addresses) {
+    _batchLog(`<b>📍 ${address}</b>`, '#cba040');
+
+    let center;
+    try {
+      center = await _batchGeocodeAddress(address);
+      _batchLog(`  Geocoded ✓`, '#7a8a6a');
+    } catch(e) {
+      _batchLog(`  ✗ ${e.message}`, '#e07070'); continue;
+    }
+
+    for (const [type, radiusM, zoom] of [['Low', LOW_R, 16], ['High', HIGH_R, 15]]) {
+      _batchLog(`  [${type}] Searching retailers…`, '#9aab8a');
+      let logos;
+      try { logos = await _batchGenerateLogos(center, radiusM); }
+      catch(e) { _batchLog(`  ✗ Search error: ${e.message}`, '#e07070'); continue; }
+
+      _batchLog(`  [${type}] Found ${logos.length} retailers`, '#9aab8a');
+      const mapName = `${address} — ${type} Aerial`;
+      try {
+        await _batchSaveMap(mapName, center, zoom, logos);
+        _batchLog(`  ✓ Saved: "${mapName}"`, '#7ecb7e');
+        saved++;
+        loadSavedMapsList();
+      } catch(e) {
+        _batchLog(`  ✗ Save failed: ${e.message}`, '#e07070');
+      }
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+
+  _batchLog(`<b>✅ Done — ${saved} maps saved.</b>`, '#cba040');
+  btn.disabled = false;
+  btn.textContent = 'Run Batch';
 }
 
 
